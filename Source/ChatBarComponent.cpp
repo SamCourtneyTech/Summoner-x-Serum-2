@@ -157,7 +157,7 @@ std::vector<std::map<std::string, std::string>> LocalAIResponse = { {
         {"FX Fil Drive", "27%"},
         {"FX Fil Pan", "27"},
         {"FX Fil Wet", "27%"},
-        { "LFO Bus 1", ".5f" }
+        { "Env 1->A Fine", ".5f" }
 } };
 
 ChatBarComponent::ChatBarComponent(SummonerXSerum2AudioProcessor& p) : processor(p)
@@ -176,15 +176,15 @@ ChatBarComponent::ChatBarComponent(SummonerXSerum2AudioProcessor& p) : processor
     sendButton.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
     sendButton.setLookAndFeel(&customSummonButton);
     sendButton.onClick = [this]() {
-        processor.listSerumParameters();
-        /*
+        //processor.listSerumParameters();
+        
         std::vector<std::map<std::string, std::string>> testResponses = { LocalAIResponse };
         processor.setResponses(testResponses);
         if (auto* serumInterface = dynamic_cast<SerumInterfaceComponent*>(&processor.getSerumInterface()))
         {
             serumInterface->updateResponseCounter();
         }
-        */
+        
         /*
         juce::String userInput = chatInput.getText();
         if (auto* editor = dynamic_cast<SummonerXSerum2AudioProcessorEditor*>(getParentComponent()->getParentComponent()))

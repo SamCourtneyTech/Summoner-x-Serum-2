@@ -212,6 +212,7 @@ void SummonerXSerum2AudioProcessor::setSerumPath(const juce::String& newPath)
         serumPluginPath = newPath;
         serumInterface.loadSerum(juce::File(serumPluginPath));
         serumInterface.prepareToPlay(getSampleRate(), getBlockSize());
+        enumerateParameters(); // Add this to refresh parameter list
     }
 }
 
@@ -252,7 +253,9 @@ bool SummonerXSerum2AudioProcessor::isBusesLayoutSupported(const BusesLayout& la
 
 juce::AudioPluginInstance* SummonerXSerum2AudioProcessor::getSerumInstance()
 {
-    return serumInterface.getSerumInstance();
+    auto* instance = serumInterface.getSerumInstance();
+    DBG("getSerumInstance: " << (instance ? instance->getName() : "nullptr"));
+    return instance;
 }
 
 void SummonerXSerum2AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)

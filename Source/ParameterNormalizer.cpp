@@ -111,6 +111,8 @@ std::pair<std::string, float> normalizeValue(const std::string& name, const std:
             normalizedValue = onToPercentage(name, value);
         else if (name == "Decay")
             normalizedValue = decayToF(name, value);
+        else
+            normalizedValue = std::stof(value);
         //missing fil pan
         //missing ratio
     }

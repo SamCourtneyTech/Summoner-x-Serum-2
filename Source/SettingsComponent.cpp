@@ -183,5 +183,7 @@ void SettingsComponent::savePath(const juce::String& path)
 juce::String SettingsComponent::loadSavedPath()
 {
     auto* userSettings = applicationProperties.getUserSettings();
-    return userSettings->getValue("pluginPath", defaultPath);
+    juce::String path = userSettings->getValue("pluginPath", defaultPath);
+    DBG("Loaded saved path: " << path);
+    return path;
 }
