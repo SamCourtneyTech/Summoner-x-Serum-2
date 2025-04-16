@@ -174,18 +174,26 @@ void SettingsComponent::paint(juce::Graphics& g)
 void SettingsComponent::resized()
 {
     auto bounds = getLocalBounds().reduced(10);
+
     pathLabel.setBounds(bounds.removeFromTop(20));
     pathDisplay.setBounds(bounds.removeFromTop(30));
+
     auto buttonWidth = 120;
     auto buttonHeight = 30;
     auto buttonSpacing = 10;
-    auto buttonArea = bounds.removeFromTop(buttonHeight * 2 + buttonSpacing);
-    browseButton.setBounds(buttonArea.getX(), buttonArea.getY(), buttonWidth, buttonHeight);
-    resetButton.setBounds(buttonArea.getX() + buttonWidth + buttonSpacing, buttonArea.getY(), buttonWidth, buttonHeight);
 
-    logoutButton.setBounds(buttonArea.getX() + 2 * (buttonWidth + buttonSpacing), buttonArea.getY(), buttonWidth, buttonHeight);
+    // Top button row: Browse + Reset
+    auto topButtonArea = bounds.removeFromTop(buttonHeight);
+    browseButton.setBounds(topButtonArea.getX(), topButtonArea.getY(), buttonWidth, buttonHeight);
+    resetButton.setBounds(topButtonArea.getX() + buttonWidth + buttonSpacing, topButtonArea.getY(), buttonWidth, buttonHeight);
 
+    // Spacer
+    bounds.removeFromTop(buttonSpacing * 4);
+
+    // Logout button
+    logoutButton.setBounds(bounds.getX(), bounds.getY(), buttonWidth, buttonHeight);
 }
+
 
 void SettingsComponent::savePath(const juce::String& path)
 {
