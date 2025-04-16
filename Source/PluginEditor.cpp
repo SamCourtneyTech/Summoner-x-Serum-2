@@ -14,35 +14,45 @@ SummonerXSerum2AudioProcessorEditor::SummonerXSerum2AudioProcessorEditor(Summone
     setName("SummonerXSerum2AudioProcessorEditor");
     setSize(1192, 815);
 
-    // Setup Tabs
+    juce::PropertiesFile::Options options;
+    options.applicationName = "SummonerXSerum2";
+    options.filenameSuffix = ".settings";
+    options.folderName = "SummonerXSerum2App";
+    options.osxLibrarySubFolder = "Application Support";
+    appProps.setStorageParameters(options);
+
+    bool loggedIn = appProps.getUserSettings()->getBoolValue("isLoggedIn", false);
+
     tabs.addTab("ChatGPT", juce::Colours::transparentBlack, &chatBar, false);
     tabs.addTab("Serum", juce::Colours::transparentBlack, &audioProcessor.getSerumInterface(), false);
     tabs.addTab("Settings", juce::Colours::transparentBlack, &settings, false);
     addAndMakeVisible(tabs);
-    tabs.setVisible(false); // Start hidden until login
+    tabs.setVisible(loggedIn);
 
-    // Setup Login
     addAndMakeVisible(login);
-    login.onLoginSuccess = [this]()
-        {
-            login.setVisible(false);
-            tabs.setVisible(true);
+    login.setVisible(!loggedIn);
+    login.onLoginSuccess = [this]() {
+        appProps.getUserSettings()->setValue("isLoggedIn", true);
+        appProps.saveIfNeeded();
+        login.setVisible(false);
+        tabs.setVisible(true);
         };
 
-    // Settings path update
+    settings.onLogout = [this]() {
+        handleLogout();
+        };
+
     settings.onPathChanged = [this](const juce::String& newPath)
         {
             DBG("onPathChanged triggered with path: " << newPath);
             audioProcessor.setSerumPath(newPath);
         };
 
-    // Preset switch logic
     audioProcessor.onPresetApplied = [this]()
         {
             tabs.setCurrentTabIndex(1);
         };
 
-    // Load saved path
     auto initialPath = settings.loadSavedPath();
     settings.updatePathDisplay(initialPath);
     audioProcessor.setSerumPath(initialPath);
@@ -90,4 +100,12 @@ void SummonerXSerum2AudioProcessorEditor::showLoadingScreen(bool show)
 {
     if (loadingManager)
         loadingManager->showLoadingScreen(show);
+}
+
+void SummonerXSerum2AudioProcessorEditor::handleLogout()
+{
+    appProps.getUserSettings()->setValue("isLoggedIn", false);
+    appProps.saveIfNeeded();
+    tabs.setVisible(false);
+    login.setVisible(true);
 }

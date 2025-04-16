@@ -24,6 +24,9 @@ public:
     juce::String loadSavedPath();
     juce::String getPluginPath() const;
 
+    std::function<void()> onLogout;
+
+
 private:
     juce::Label pathLabel;
     juce::Label pathDisplay;
@@ -36,6 +39,7 @@ private:
     void browseForPath();
     void savePath(const juce::String& path);
     juce::Label pluginPathLabel;
+    juce::TextButton logoutButton;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SettingsComponent)
 };

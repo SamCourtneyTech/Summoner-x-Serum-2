@@ -62,6 +62,17 @@ SettingsComponent::SettingsComponent(SummonerXSerum2AudioProcessor& processor)
     resetButton.setColour(juce::TextButton::textColourOnId, juce::Colours::darkgoldenrod);
     resetButton.setColour(juce::TextButton::textColourOffId, juce::Colours::black);
     DBG("SettingsComponent constructed with path: " << loadSavedPath());
+
+    logoutButton.setLookAndFeel(&customSettingsButtons);
+    logoutButton.setButtonText("Logout");
+    logoutButton.setColour(juce::TextButton::buttonColourId, juce::Colours::whitesmoke);
+    logoutButton.setColour(juce::TextButton::textColourOnId, juce::Colours::darkgoldenrod);
+    logoutButton.setColour(juce::TextButton::textColourOffId, juce::Colours::black);
+    logoutButton.onClick = [this]() {
+        if (onLogout)
+            onLogout();
+        };
+    addAndMakeVisible(logoutButton);
 }
 
 SettingsComponent::~SettingsComponent()
@@ -171,6 +182,9 @@ void SettingsComponent::resized()
     auto buttonArea = bounds.removeFromTop(buttonHeight * 2 + buttonSpacing);
     browseButton.setBounds(buttonArea.getX(), buttonArea.getY(), buttonWidth, buttonHeight);
     resetButton.setBounds(buttonArea.getX() + buttonWidth + buttonSpacing, buttonArea.getY(), buttonWidth, buttonHeight);
+
+    logoutButton.setBounds(buttonArea.getX() + 2 * (buttonWidth + buttonSpacing), buttonArea.getY(), buttonWidth, buttonHeight);
+
 }
 
 void SettingsComponent::savePath(const juce::String& path)
