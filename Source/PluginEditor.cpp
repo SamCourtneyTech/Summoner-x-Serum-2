@@ -106,6 +106,8 @@ void SummonerXSerum2AudioProcessorEditor::handleLogout()
 {
     appProps.getUserSettings()->setValue("isLoggedIn", false);
     appProps.saveIfNeeded();
+
+    login.resetFields(); // Clear input fields
     tabs.setVisible(false);
     login.setVisible(true);
 }

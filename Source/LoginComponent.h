@@ -56,6 +56,13 @@ public:
         }
     }
 
+    void resetFields()
+    {
+        username.clear();
+        password.clear();
+    }
+
+
 private:
     juce::Label usernameLabel, passwordLabel;
     juce::TextEditor username, password;
