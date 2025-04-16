@@ -13,23 +13,41 @@ SummonerXSerum2AudioProcessorEditor::SummonerXSerum2AudioProcessorEditor(Summone
 {
     setName("SummonerXSerum2AudioProcessorEditor");
     setSize(1192, 815);
+
+    // Setup Tabs
     tabs.addTab("ChatGPT", juce::Colours::transparentBlack, &chatBar, false);
     tabs.addTab("Serum", juce::Colours::transparentBlack, &audioProcessor.getSerumInterface(), false);
     tabs.addTab("Settings", juce::Colours::transparentBlack, &settings, false);
+    addAndMakeVisible(tabs);
+    tabs.setVisible(false); // Start hidden until login
+
+    // Setup Login
+    addAndMakeVisible(login);
+    login.onLoginSuccess = [this]()
+        {
+            login.setVisible(false);
+            tabs.setVisible(true);
+        };
+
+    // Settings path update
     settings.onPathChanged = [this](const juce::String& newPath)
         {
             DBG("onPathChanged triggered with path: " << newPath);
             audioProcessor.setSerumPath(newPath);
         };
-    addAndMakeVisible(tabs);
+
+    // Preset switch logic
     audioProcessor.onPresetApplied = [this]()
         {
             tabs.setCurrentTabIndex(1);
         };
+
+    // Load saved path
     auto initialPath = settings.loadSavedPath();
     settings.updatePathDisplay(initialPath);
     audioProcessor.setSerumPath(initialPath);
 }
+
 
 SummonerXSerum2AudioProcessorEditor::~SummonerXSerum2AudioProcessorEditor()
 {
@@ -50,6 +68,7 @@ void SummonerXSerum2AudioProcessorEditor::paint(juce::Graphics& g)
 
 void SummonerXSerum2AudioProcessorEditor::resized()
 {
+    login.setBounds(getLocalBounds());
     tabs.setBounds(getLocalBounds());
 }
 

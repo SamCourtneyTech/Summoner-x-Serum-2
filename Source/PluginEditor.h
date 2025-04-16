@@ -5,6 +5,8 @@
 #include "SerumInterfaceComponent.h"
 #include "SettingsComponent.h"
 #include "LoadingComponent.h"
+#include "LoginComponent.h"
+
 
 class SummonerXSerum2AudioProcessorEditor : public juce::AudioProcessorEditor
 {
@@ -24,6 +26,6 @@ private:
     SettingsComponent settings;
     void loadPluginFromSettings(const juce::String& path);
     std::unique_ptr<LoadingScreenManager> loadingManager;
-
+    LoginComponent login;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SummonerXSerum2AudioProcessorEditor)
 };
