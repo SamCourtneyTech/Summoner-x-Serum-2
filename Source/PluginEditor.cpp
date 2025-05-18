@@ -33,8 +33,9 @@ SummonerXSerum2AudioProcessorEditor::SummonerXSerum2AudioProcessorEditor(Summone
 
     addAndMakeVisible(login);
     login.setVisible(!loggedIn);
+    DBG("Setting onLoginSuccess callback for LoginComponent");
     login.onLoginSuccess = [this](juce::String token, int credits) {
-        DBG("Login successful: Token=" + token + ", Credits=" + juce::String(credits));
+        DBG("onLoginSuccess called with Token=" + token + ", Credits=" + juce::String(credits));
         appProps.getUserSettings()->setValue("isLoggedIn", true);
         appProps.getUserSettings()->setValue("accessToken", token);
         appProps.getUserSettings()->setValue("credits", credits);
@@ -43,7 +44,8 @@ SummonerXSerum2AudioProcessorEditor::SummonerXSerum2AudioProcessorEditor(Summone
         tabs.setVisible(true);
         chatBar.setCredits(credits);
         DBG("After login - login visible: " + juce::String(login.isVisible() ? "true" : "false") + ", tabs visible: " + juce::String(tabs.isVisible() ? "true" : "false"));
-        repaint(); // Force a repaint to ensure UI updates
+        repaint();
+        resized(); // Ensure layout updates
         };
 
     settings.onLogout = [this]() {
@@ -51,7 +53,7 @@ SummonerXSerum2AudioProcessorEditor::SummonerXSerum2AudioProcessorEditor(Summone
         };
 
     settings.onPathChanged = [this](const juce::String& newPath) {
-        DBG("onPathChanged triggered with path: " << newPath);
+        DBG("onPathChanged triggered with path: " + newPath);
         audioProcessor.setSerumPath(newPath);
         };
 
@@ -83,6 +85,7 @@ void SummonerXSerum2AudioProcessorEditor::paint(juce::Graphics& g)
     }
     if (isLoading)
     {
+        DBG("Painting with isLoading=true, calling showLoadingScreen");
         loadingManager->showLoadingScreen(true);
         repaint();
     }
@@ -92,6 +95,7 @@ void SummonerXSerum2AudioProcessorEditor::resized()
 {
     login.setBounds(getLocalBounds());
     tabs.setBounds(getLocalBounds());
+    DBG("resized() called - login bounds: " + login.getBounds().toString() + ", tabs bounds: " + tabs.getBounds().toString());
 }
 
 void SummonerXSerum2AudioProcessorEditor::loadPluginFromSettings(const juce::String& path)
@@ -110,8 +114,13 @@ void SummonerXSerum2AudioProcessorEditor::loadPluginFromSettings(const juce::Str
 
 void SummonerXSerum2AudioProcessorEditor::showLoadingScreen(bool show)
 {
+    DBG("showLoadingScreen called with show=" + juce::String(show ? "true" : "false"));
+    isLoading = show;
     if (loadingManager)
+    {
         loadingManager->showLoadingScreen(show);
+    }
+    repaint();
 }
 
 void SummonerXSerum2AudioProcessorEditor::handleLogout()
@@ -126,4 +135,5 @@ void SummonerXSerum2AudioProcessorEditor::handleLogout()
     login.setVisible(true);
     DBG("After logout - login visible: " + juce::String(login.isVisible() ? "true" : "false") + ", tabs visible: " + juce::String(tabs.isVisible() ? "true" : "false"));
     repaint();
+    resized();
 }
