@@ -6,6 +6,7 @@
 #include "SettingsComponent.h"
 #include "LoadingComponent.h"
 #include "LoginComponent.h"
+#include "LoginState.h"
 
 class SummonerXSerum2AudioProcessorEditor : public juce::AudioProcessorEditor
 {

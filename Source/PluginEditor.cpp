@@ -1,4 +1,3 @@
-#pragma once
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 #include <JuceHeader.h>
@@ -22,42 +21,52 @@ SummonerXSerum2AudioProcessorEditor::SummonerXSerum2AudioProcessorEditor(Summone
     appProps.setStorageParameters(options);
 
     bool loggedIn = appProps.getUserSettings()->getBoolValue("isLoggedIn", false);
+    juce::String accessToken = appProps.getUserSettings()->getValue("accessToken", "");
+    int credits = appProps.getUserSettings()->getIntValue("credits", 0);
 
     tabs.addTab("ChatGPT", juce::Colours::transparentBlack, &chatBar, false);
     tabs.addTab("Serum", juce::Colours::transparentBlack, &audioProcessor.getSerumInterface(), false);
     tabs.addTab("Settings", juce::Colours::transparentBlack, &settings, false);
     addAndMakeVisible(tabs);
     tabs.setVisible(loggedIn);
+    DBG("Initial visibility - loggedIn: " + juce::String(loggedIn ? "true" : "false") + ", tabs visible: " + juce::String(tabs.isVisible() ? "true" : "false"));
 
     addAndMakeVisible(login);
     login.setVisible(!loggedIn);
-    login.onLoginSuccess = [this]() {
+    login.onLoginSuccess = [this](juce::String token, int credits) {
+        DBG("Login successful: Token=" + token + ", Credits=" + juce::String(credits));
         appProps.getUserSettings()->setValue("isLoggedIn", true);
+        appProps.getUserSettings()->setValue("accessToken", token);
+        appProps.getUserSettings()->setValue("credits", credits);
         appProps.saveIfNeeded();
         login.setVisible(false);
         tabs.setVisible(true);
+        chatBar.setCredits(credits);
+        DBG("After login - login visible: " + juce::String(login.isVisible() ? "true" : "false") + ", tabs visible: " + juce::String(tabs.isVisible() ? "true" : "false"));
+        repaint(); // Force a repaint to ensure UI updates
         };
 
     settings.onLogout = [this]() {
         handleLogout();
         };
 
-    settings.onPathChanged = [this](const juce::String& newPath)
-        {
-            DBG("onPathChanged triggered with path: " << newPath);
-            audioProcessor.setSerumPath(newPath);
+    settings.onPathChanged = [this](const juce::String& newPath) {
+        DBG("onPathChanged triggered with path: " << newPath);
+        audioProcessor.setSerumPath(newPath);
         };
 
-    audioProcessor.onPresetApplied = [this]()
-        {
-            tabs.setCurrentTabIndex(1);
+    audioProcessor.onPresetApplied = [this]() {
+        tabs.setCurrentTabIndex(1);
         };
 
     auto initialPath = settings.loadSavedPath();
     settings.updatePathDisplay(initialPath);
     audioProcessor.setSerumPath(initialPath);
-}
 
+    if (loggedIn && credits > 0) {
+        chatBar.setCredits(credits);
+    }
+}
 
 SummonerXSerum2AudioProcessorEditor::~SummonerXSerum2AudioProcessorEditor()
 {
@@ -66,9 +75,12 @@ SummonerXSerum2AudioProcessorEditor::~SummonerXSerum2AudioProcessorEditor()
 void SummonerXSerum2AudioProcessorEditor::paint(juce::Graphics& g)
 {
     g.fillAll(juce::Colours::black);
-    g.setColour(juce::Colours::white);
-    g.setFont(juce::FontOptions(30.0f));
-    g.drawFittedText("SummonerXSerum2 (SC1)", getLocalBounds(), juce::Justification::centred, 1);
+    if (!tabs.isVisible())
+    {
+        g.setColour(juce::Colours::white);
+        g.setFont(juce::FontOptions(30.0f));
+        g.drawFittedText("SummonerXSerum2 (SC1)", getLocalBounds(), juce::Justification::centred, 1);
+    }
     if (isLoading)
     {
         loadingManager->showLoadingScreen(true);
@@ -85,7 +97,7 @@ void SummonerXSerum2AudioProcessorEditor::resized()
 void SummonerXSerum2AudioProcessorEditor::loadPluginFromSettings(const juce::String& path)
 {
     juce::File pluginFile(path);
-    if (pluginFile.existsAsFile()) 
+    if (pluginFile.existsAsFile())
     {
         audioProcessor.setSerumPath(path);
         DBG("Loaded plugin from: " + path);
@@ -105,9 +117,13 @@ void SummonerXSerum2AudioProcessorEditor::showLoadingScreen(bool show)
 void SummonerXSerum2AudioProcessorEditor::handleLogout()
 {
     appProps.getUserSettings()->setValue("isLoggedIn", false);
+    appProps.getUserSettings()->setValue("accessToken", "");
+    appProps.getUserSettings()->setValue("credits", 0);
     appProps.saveIfNeeded();
 
-    login.resetFields(); // Clear input fields
+    chatBar.setCredits(0);
     tabs.setVisible(false);
     login.setVisible(true);
+    DBG("After logout - login visible: " + juce::String(login.isVisible() ? "true" : "false") + ", tabs visible: " + juce::String(tabs.isVisible() ? "true" : "false"));
+    repaint();
 }

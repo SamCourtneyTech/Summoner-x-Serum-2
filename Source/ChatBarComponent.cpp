@@ -175,6 +175,9 @@ ChatBarComponent::ChatBarComponent(SummonerXSerum2AudioProcessor& p) : processor
     sendButton.setColour(juce::TextButton::textColourOnId, juce::Colours::whitesmoke);
     sendButton.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
     sendButton.setLookAndFeel(&customSummonButton);
+    addAndMakeVisible(creditsLabel);
+    creditsLabel.setText("Credits: 0", juce::dontSendNotification);
+    creditsLabel.setColour(juce::Label::textColourId, juce::Colours::white);
     sendButton.onClick = [this]() {
         //processor.listSerumParameters();
         
@@ -347,9 +350,15 @@ void ChatBarComponent::resized()
     auto yPosition = (getHeight() - chatBarHeight) / 2;
     chatInput.setBounds((getWidth() - chatBarWidth - buttonWidth - 10) / 2, yPosition + -50, chatBarWidth, chatBarHeight);
     sendButton.setBounds(chatInput.getRight() + 10, yPosition - 50, buttonWidth, chatBarHeight);
+    creditsLabel.setBounds(area.removeFromTop(30).reduced(10));
 }
 
 void ChatBarComponent::sendAIResponseToProcessor(const std::map<std::string, std::string>& aiResponse)
 {
     processor.applyPresetToSerum(aiResponse);
+}
+
+void ChatBarComponent::setCredits(int credits)
+{
+    creditsLabel.setText("Credits: " + juce::String(credits), juce::dontSendNotification);
 }

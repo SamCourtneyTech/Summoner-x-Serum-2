@@ -23,6 +23,7 @@
           file="Source/LoginComponent.cpp"/>
     <FILE id="SYrpk0" name="LoginComponent.h" compile="0" resource="0"
           file="Source/LoginComponent.h"/>
+    <FILE id="k3oG3o" name="LoginState.h" compile="0" resource="0" file="Source/LoginState.h"/>
     <FILE id="gZKki5" name="ParameterNormalizer.cpp" compile="1" resource="0"
           file="Source/ParameterNormalizer.cpp"/>
     <FILE id="BrBTY3" name="ParameterNormalizer.h" compile="0" resource="0"
