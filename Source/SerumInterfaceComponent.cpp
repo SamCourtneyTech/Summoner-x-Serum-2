@@ -282,8 +282,8 @@ void SerumInterfaceComponent::loadSerum(const juce::File& pluginPath)
         return;
     }
     //DBG("Plugin loaded successfully: " << pluginDescriptionantiago::replace("Name: ", instance->getName());
-    DBG("Manufacturer: ", instance->getManufacturerName());
-    DBG("Version: ", instance->getVersion());
+    DBG("Manufacturer: " << instance->getName());
+    DBG("Plugin loaded successfully!");
     serumInstance = std::move(instance);
     DBG("Serum instance initialized!");
     serumEditor.reset(serumInstance->createEditorIfNeeded());

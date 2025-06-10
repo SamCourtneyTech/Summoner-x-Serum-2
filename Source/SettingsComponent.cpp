@@ -104,7 +104,7 @@ void SettingsComponent::browseForPath()
 {
     DBG("Browse button clicked!");
     fileChooser = std::make_unique<juce::FileChooser>(
-        "Select Serum.vst3 or its Containing Folder",
+        "Select Serum2.vst3 or its Containing Folder",
         juce::File(defaultPath),
         "*.vst3"
     );
@@ -119,10 +119,10 @@ void SettingsComponent::browseForPath()
                 if (selectedFileOrFolder.isDirectory())
                 {
                     DBG("Selected directory: " << selectedFileOrFolder.getFullPathName());
-                    auto serumFile = selectedFileOrFolder.getChildFile("Serum.vst3");
+                    auto serumFile = selectedFileOrFolder.getChildFile("Serum2.vst3");
                     if (serumFile.existsAsFile())
                     {
-                        DBG("Found Serum.vst3 in directory: " << serumFile.getFullPathName());
+                        DBG("Found Serum2.vst3 in directory: " << serumFile.getFullPathName());
                         pathDisplay.setText(serumFile.getFullPathName(), juce::dontSendNotification);
                         savePath(serumFile.getFullPathName());
                         if (onPathChanged)
@@ -133,13 +133,13 @@ void SettingsComponent::browseForPath()
                         juce::AlertWindow::showMessageBoxAsync(
                             juce::AlertWindow::WarningIcon,
                             "Invalid Folder",
-                            "The selected folder does not contain Serum.vst3. Please select the correct folder or file."
+                            "The selected folder does not contain Serum2.vst3. Please select the correct folder or file."
                         );
                     }
                 }
-                else if (selectedFileOrFolder.getFileName() == "Serum.vst3" && selectedFileOrFolder.existsAsFile())
+                else if (selectedFileOrFolder.getFileName() == "Serum2.vst3" && selectedFileOrFolder.existsAsFile())
                 {
-                    DBG("Selected Serum.vst3 file: " << selectedFileOrFolder.getFullPathName());
+                    DBG("Selected Serum2.vst3 file: " << selectedFileOrFolder.getFullPathName());
                     pathDisplay.setText(selectedFileOrFolder.getFullPathName(), juce::dontSendNotification);
                     savePath(selectedFileOrFolder.getFullPathName());
                     if (onPathChanged)
@@ -150,7 +150,7 @@ void SettingsComponent::browseForPath()
                     juce::AlertWindow::showMessageBoxAsync(
                         juce::AlertWindow::WarningIcon,
                         "Invalid Selection",
-                        "Please select the Serum.vst3 file or its containing folder."
+                        "Please select the Serum2.vst3 file or its containing folder."
                     );
                 }
             }
