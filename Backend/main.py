@@ -508,3 +508,5 @@ def handler(event, context):
     if path == "/webhook" or "webhook" in path.lower():
         return webhook_handler(event, context)
     return Mangum(app)(event, context)
+
+# Test comment to trigger CI/CD deployment
