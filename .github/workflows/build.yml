@@ -5,8 +5,7 @@ on:
     branches: [ main, develop ]
   pull_request:
     branches: [ main ]
-  release:
-    types: [published]
+  workflow_dispatch:
 
 jobs:
   build-plugin:
@@ -20,12 +19,10 @@ jobs:
             os: macos-latest
             build_path: Builds/MacOSX
             artifact_name: macOS
-            artifact_path: Builds/MacOSX/build/Build/Products/Release
           - name: Windows
             os: windows-latest
             build_path: Builds/VisualStudio2022
             artifact_name: Windows
-            artifact_path: Builds/VisualStudio2022/x64/Release
 
     steps:
     - uses: actions/checkout@v4
@@ -40,7 +37,7 @@ jobs:
 
     - name: Setup MSBuild (Windows)
       if: runner.os == 'Windows'
-      uses: microsoft/setup-msbuild@v1.1
+      uses: microsoft/setup-msbuild@v1.3
 
     - name: Build Plugin (macOS)
       if: runner.os == 'macOS'
@@ -51,18 +48,32 @@ jobs:
                    -configuration Release \
                    -derivedDataPath ./build \
                    build
+        
+        # Create artifacts directory and copy built files
+        mkdir -p ./artifacts
+        if [ -d "./build/Build/Products/Release" ]; then
+          cp -R "./build/Build/Products/Release/"* ./artifacts/ 2>/dev/null || true
+        fi
+        ls -la ./artifacts/
 
     - name: Build Plugin (Windows)
       if: runner.os == 'Windows'
       run: |
         cd "${{ matrix.build_path }}"
         msbuild "Summoner X Serum2.sln" /p:Configuration=Release /p:Platform=x64 /m
+        
+        # Create artifacts directory and copy built files
+        mkdir artifacts
+        if (Test-Path "x64/Release") {
+          Copy-Item "x64/Release/*" -Destination "./artifacts/" -Recurse -Force -ErrorAction SilentlyContinue
+        }
+        Get-ChildItem ./artifacts/
 
     - name: Upload Artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.artifact_name }}-plugin
-        path: ${{ matrix.artifact_path }}
+        path: ${{ matrix.build_path }}/artifacts/
         retention-days: 30
 
   test-backend:
