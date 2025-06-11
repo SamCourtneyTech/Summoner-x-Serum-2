@@ -1,0 +1,13 @@
+ECHO is on.
+# Python 
+__pycache__/ 
+*.pyc 
+venv/ 
+env/ 
+ 
+# Sensitive data 
+.env 
+.aws/ 
+ 
+# AWS Lambda 
+*.zip 
