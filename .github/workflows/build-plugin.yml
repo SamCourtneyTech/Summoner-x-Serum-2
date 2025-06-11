@@ -1,0 +1,185 @@
+name: Build Audio Plugin
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'Summoner-x-Serum-2/**'
+      - '.github/workflows/build-plugin.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'Summoner-x-Serum-2/**'
+      - '.github/workflows/build-plugin.yml'
+  workflow_dispatch:
+
+env:
+  BUILD_TYPE: Release
+  BUILD_DIR: Summoner-x-Serum-2/Builds
+  PLUGIN_NAME: "Summoner X Serum2"
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS
+            os: macos-latest
+            build_path: MacOSX
+            cmake_generator: Xcode
+            artifact_name: macos-plugin
+            artifact_path: "Summoner-x-Serum-2/Builds/MacOSX/build/Release"
+            
+          - name: Windows
+            os: windows-latest
+            build_path: VisualStudio2022
+            cmake_generator: "Visual Studio 17 2022"
+            artifact_name: windows-plugin
+            artifact_path: "Summoner-x-Serum-2/Builds/VisualStudio2022/x64/Release"
+
+    runs-on: ${{ matrix.os }}
+    name: Build on ${{ matrix.name }}
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Set up Xcode (macOS only)
+      if: matrix.os == 'macos-latest'
+      uses: maxim-lobanov/setup-xcode@v1
+      with:
+        xcode-version: latest-stable
+
+    - name: Cache JUCE
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/Library/Caches/JUCE
+          ~/.cache/JUCE
+          %LOCALAPPDATA%\JUCE
+        key: juce-${{ runner.os }}-${{ hashFiles('**/JuceHeader.h') }}
+        restore-keys: |
+          juce-${{ runner.os }}-
+
+    # macOS Build
+    - name: Build macOS Plugin
+      if: matrix.os == 'macos-latest'
+      run: |
+        cd "${{ env.BUILD_DIR }}/${{ matrix.build_path }}"
+        xcodebuild -project "Summoner X Serum2.xcodeproj" \
+                   -scheme "Summoner X Serum2_All" \
+                   -configuration Release \
+                   -derivedDataPath ./build \
+                   build
+        
+        # Create artifacts directory
+        mkdir -p ./artifacts
+        
+        # Copy built plugins
+        if [ -d "./build/Build/Products/Release" ]; then
+          cp -r "./build/Build/Products/Release/"*.vst3 ./artifacts/ 2>/dev/null || true
+          cp -r "./build/Build/Products/Release/"*.component ./artifacts/ 2>/dev/null || true
+          cp -r "./build/Build/Products/Release/"*.app ./artifacts/ 2>/dev/null || true
+        fi
+        
+        ls -la ./artifacts/
+
+    # Windows Build  
+    - name: Build Windows Plugin
+      if: matrix.os == 'windows-latest'
+      run: |
+        cd "${{ env.BUILD_DIR }}/${{ matrix.build_path }}"
+        
+        # Build the solution
+        msbuild "Summoner X Serum2.sln" /p:Configuration=Release /p:Platform=x64 /m
+        
+        # Create artifacts directory
+        mkdir artifacts
+        
+        # Copy built plugins
+        if (Test-Path "x64/Release") {
+          Copy-Item "x64/Release/*.vst3" -Destination "./artifacts/" -Recurse -ErrorAction SilentlyContinue
+          Copy-Item "x64/Release/*.exe" -Destination "./artifacts/" -ErrorAction SilentlyContinue
+        }
+        
+        Get-ChildItem ./artifacts/
+
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.artifact_name }}
+        path: |
+          ${{ env.BUILD_DIR }}/${{ matrix.build_path }}/artifacts/
+        retention-days: 30
+
+  create-release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: ./releases
+
+    - name: Create Release ZIP files
+      run: |
+        cd ./releases
+        
+        # Create macOS release
+        if [ -d "macos-plugin" ]; then
+          cd macos-plugin
+          zip -r "../Summoner-X-Serum2-macOS.zip" .
+          cd ..
+        fi
+        
+        # Create Windows release
+        if [ -d "windows-plugin" ]; then
+          cd windows-plugin
+          zip -r "../Summoner-X-Serum2-Windows.zip" .
+          cd ..
+        fi
+        
+        ls -la
+
+    - name: Generate Release Tag
+      id: tag
+      run: |
+        TAG="v$(date +'%Y%m%d-%H%M%S')-${GITHUB_SHA::7}"
+        echo "tag=$TAG" >> $GITHUB_OUTPUT
+        echo "Generated tag: $TAG"
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ steps.tag.outputs.tag }}
+        name: "Summoner X Serum2 - ${{ steps.tag.outputs.tag }}"
+        body: |
+          Automated release of Summoner X Serum2 Audio Plugin
+          
+          ## Changes
+          - Built from commit: ${{ github.sha }}
+          - Build date: ${{ steps.tag.outputs.tag }}
+          
+          ## Downloads
+          - **macOS**: Download the macOS ZIP file for AU/VST3 components
+          - **Windows**: Download the Windows ZIP file for VST3 plugins
+          
+          ## Installation
+          1. Download the appropriate file for your platform
+          2. Extract the ZIP file
+          3. Copy the plugin files to your DAW's plugin directory
+        files: |
+          ./releases/Summoner-X-Serum2-macOS.zip
+          ./releases/Summoner-X-Serum2-Windows.zip
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

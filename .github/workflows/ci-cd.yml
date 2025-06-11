@@ -1,0 +1,186 @@
+name: Complete CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      deploy_lambda:
+        description: 'Force deploy Lambda (even if no backend changes)'
+        required: false
+        default: false
+        type: boolean
+      deploy_plugin:
+        description: 'Force build and release plugin'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  # Detect what changed
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend-changed: ${{ steps.changes.outputs.backend }}
+      plugin-changed: ${{ steps.changes.outputs.plugin }}
+      should-deploy-lambda: ${{ steps.deploy-decision.outputs.lambda }}
+      should-build-plugin: ${{ steps.deploy-decision.outputs.plugin }}
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Detect changes
+      uses: dorny/paths-filter@v2
+      id: changes
+      with:
+        filters: |
+          backend:
+            - 'Backend/**'
+            - '.github/workflows/deploy-lambda.yml'
+            - '.github/workflows/ci-cd.yml'
+          plugin:
+            - 'Summoner-x-Serum-2/**'
+            - '.github/workflows/build-plugin.yml'
+            - '.github/workflows/ci-cd.yml'
+
+    - name: Deployment decision
+      id: deploy-decision
+      run: |
+        # Lambda deployment logic
+        if [ "${{ steps.changes.outputs.backend }}" == "true" ] || [ "${{ github.event.inputs.deploy_lambda }}" == "true" ] || [ "${{ github.ref }}" == "refs/heads/main" ]; then
+          echo "lambda=true" >> $GITHUB_OUTPUT
+          echo "🚀 Lambda will be deployed"
+        else
+          echo "lambda=false" >> $GITHUB_OUTPUT
+          echo "⏭️ Lambda deployment skipped"
+        fi
+        
+        # Plugin build logic
+        if [ "${{ steps.changes.outputs.plugin }}" == "true" ] || [ "${{ github.event.inputs.deploy_plugin }}" == "true" ]; then
+          echo "plugin=true" >> $GITHUB_OUTPUT
+          echo "🔨 Plugin will be built"
+        else
+          echo "plugin=false" >> $GITHUB_OUTPUT
+          echo "⏭️ Plugin build skipped"
+        fi
+
+  # Call the plugin build workflow
+  build-plugin:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.should-build-plugin == 'true'
+    uses: ./.github/workflows/build-plugin.yml
+    secrets: inherit
+
+  # Call the lambda deployment workflow
+  deploy-lambda:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.should-deploy-lambda == 'true'
+    uses: ./.github/workflows/deploy-lambda.yml
+    secrets: inherit
+
+  # Summary job
+  summary:
+    needs: [detect-changes, build-plugin, deploy-lambda]
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+    - name: Pipeline Summary
+      run: |
+        echo "## 🚀 CI/CD Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        echo "### 📊 Status Overview" >> $GITHUB_STEP_SUMMARY
+        echo "| Component | Action | Status |" >> $GITHUB_STEP_SUMMARY
+        echo "|-----------|---------|---------|" >> $GITHUB_STEP_SUMMARY
+        
+        # Plugin build status
+        if [ "${{ needs.detect-changes.outputs.should-build-plugin }}" == "true" ]; then
+          if [ "${{ needs.build-plugin.result }}" == "success" ]; then
+            echo "| 🎵 Audio Plugin | Build & Release | ✅ Success |" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ needs.build-plugin.result }}" == "failure" ]; then
+            echo "| 🎵 Audio Plugin | Build & Release | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| 🎵 Audio Plugin | Build & Release | ⏳ ${{ needs.build-plugin.result }} |" >> $GITHUB_STEP_SUMMARY
+          fi
+        else
+          echo "| 🎵 Audio Plugin | Build & Release | ⏭️ Skipped |" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        # Lambda deployment status
+        if [ "${{ needs.detect-changes.outputs.should-deploy-lambda }}" == "true" ]; then
+          if [ "${{ needs.deploy-lambda.result }}" == "success" ]; then
+            echo "| ⚡ AWS Lambda | Deploy | ✅ Success |" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ needs.deploy-lambda.result }}" == "failure" ]; then
+            echo "| ⚡ AWS Lambda | Deploy | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| ⚡ AWS Lambda | Deploy | ⏳ ${{ needs.deploy-lambda.result }} |" >> $GITHUB_STEP_SUMMARY
+          fi
+        else
+          echo "| ⚡ AWS Lambda | Deploy | ⏭️ Skipped |" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📝 Details" >> $GITHUB_STEP_SUMMARY
+        echo "- **Commit**: \`${GITHUB_SHA::7}\`" >> $GITHUB_STEP_SUMMARY
+        echo "- **Branch**: \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "- **Trigger**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+        
+        if [ "${{ needs.detect-changes.outputs.plugin-changed }}" == "true" ]; then
+          echo "- **Plugin Changes**: Detected ✅" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        if [ "${{ needs.detect-changes.outputs.backend-changed }}" == "true" ]; then
+          echo "- **Backend Changes**: Detected ✅" >> $GITHUB_STEP_SUMMARY
+        fi
+
+  # Notification job (optional - can be configured for Slack, Discord, etc.)
+  notify:
+    needs: [detect-changes, build-plugin, deploy-lambda, summary]
+    runs-on: ubuntu-latest
+    if: always() && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Prepare notification
+      id: notification
+      run: |
+        # Determine overall status
+        OVERALL_STATUS="success"
+        
+        if [ "${{ needs.build-plugin.result }}" == "failure" ] || [ "${{ needs.deploy-lambda.result }}" == "failure" ]; then
+          OVERALL_STATUS="failure"
+        elif [ "${{ needs.build-plugin.result }}" == "cancelled" ] || [ "${{ needs.deploy-lambda.result }}" == "cancelled" ]; then
+          OVERALL_STATUS="cancelled"
+        fi
+        
+        echo "status=$OVERALL_STATUS" >> $GITHUB_OUTPUT
+        
+        # Create notification message
+        if [ "$OVERALL_STATUS" == "success" ]; then
+          echo "message=✅ CI/CD Pipeline completed successfully!" >> $GITHUB_OUTPUT
+        elif [ "$OVERALL_STATUS" == "failure" ]; then
+          echo "message=❌ CI/CD Pipeline failed!" >> $GITHUB_OUTPUT
+        else
+          echo "message=⚠️ CI/CD Pipeline was cancelled!" >> $GITHUB_OUTPUT
+        fi
+
+    # Add your notification service here (Slack, Discord, email, etc.)
+    # Example for Slack:
+    # - name: Send Slack notification
+    #   if: steps.notification.outputs.status != 'success'
+    #   uses: 8398a7/action-slack@v3
+    #   with:
+    #     status: ${{ steps.notification.outputs.status }}
+    #     text: ${{ steps.notification.outputs.message }}
+    #   env:
+    #     SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+    - name: Output final status
+      run: |
+        echo "🎯 Final Status: ${{ steps.notification.outputs.status }}"
+        echo "${{ steps.notification.outputs.message }}"

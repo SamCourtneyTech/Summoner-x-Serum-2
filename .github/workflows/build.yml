@@ -1,0 +1,130 @@
+name: Build Summoner X Serum 2
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  release:
+    types: [published]
+
+jobs:
+  build-plugin:
+    name: Build Plugin (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS
+            os: macos-latest
+            build_path: Builds/MacOSX
+            artifact_name: macOS
+            artifact_path: Builds/MacOSX/build/Build/Products/Release
+          - name: Windows
+            os: windows-latest
+            build_path: Builds/VisualStudio2022
+            artifact_name: Windows
+            artifact_path: Builds/VisualStudio2022/x64/Release
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Setup Xcode (macOS)
+      if: runner.os == 'macOS'
+      uses: maxim-lobanov/setup-xcode@v1
+      with:
+        xcode-version: latest-stable
+
+    - name: Setup MSBuild (Windows)
+      if: runner.os == 'Windows'
+      uses: microsoft/setup-msbuild@v1.1
+
+    - name: Build Plugin (macOS)
+      if: runner.os == 'macOS'
+      run: |
+        cd "${{ matrix.build_path }}"
+        xcodebuild -project "Summoner X Serum2.xcodeproj" \
+                   -scheme "Summoner X Serum2_All" \
+                   -configuration Release \
+                   -derivedDataPath ./build \
+                   build
+
+    - name: Build Plugin (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        cd "${{ matrix.build_path }}"
+        msbuild "Summoner X Serum2.sln" /p:Configuration=Release /p:Platform=x64 /m
+
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ matrix.artifact_name }}-plugin
+        path: ${{ matrix.artifact_path }}
+        retention-days: 30
+
+  test-backend:
+    name: Test Backend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./Backend
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Lint with flake8
+      run: |
+        pip install flake8
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+    - name: Test syntax
+      run: |
+        python -m py_compile main.py
+
+  create-release:
+    name: Create Release
+    needs: [build-plugin, test-backend]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+
+    steps:
+    - name: Download macOS Artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: macOS-plugin
+        path: ./release/macOS
+
+    - name: Download Windows Artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: Windows-plugin
+        path: ./release/Windows
+
+    - name: Create Release Archive
+      run: |
+        cd release
+        zip -r summoner-x-serum2-${{ github.event.release.tag_name }}.zip .
+
+    - name: Upload Release Assets
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ./release/summoner-x-serum2-${{ github.event.release.tag_name }}.zip
+        asset_name: summoner-x-serum2-${{ github.event.release.tag_name }}.zip
+        asset_content_type: application/zip

@@ -1,0 +1,179 @@
+name: Deploy AWS Lambda
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'Backend/**'
+      - '.github/workflows/deploy-lambda.yml'
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-2
+  LAMBDA_FUNCTION_NAME: summoner-aws-backend
+  PYTHON_VERSION: '3.9'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: pip-${{ runner.os }}-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          pip-${{ runner.os }}-
+
+    - name: Install dependencies
+      run: |
+        cd "Backend/summoner-aws-backend"
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+        # Install additional deployment dependencies
+        pip install awscli boto3
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Install dependencies to deployment package
+      run: |
+        cd "Backend/summoner-aws-backend"
+        
+        # Create deployment package directory
+        mkdir -p deployment-package
+        
+        # Install Python dependencies to deployment package
+        pip install -r requirements.txt -t deployment-package/
+        
+        # Copy application code
+        cp *.py deployment-package/
+        cp requirements.txt deployment-package/
+        
+        # Remove unnecessary files to reduce package size
+        find deployment-package -name "*.pyc" -delete
+        find deployment-package -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
+        find deployment-package -name "*.dist-info" -type d -exec rm -rf {} + 2>/dev/null || true
+        find deployment-package -name "tests" -type d -exec rm -rf {} + 2>/dev/null || true
+
+    - name: Create deployment ZIP
+      run: |
+        cd "Backend/summoner-aws-backend/deployment-package"
+        zip -r ../lambda-deployment.zip .
+        cd ..
+        ls -la lambda-deployment.zip
+        
+        # Check package size (Lambda has a 50MB limit for direct upload)
+        SIZE=$(stat -c%s lambda-deployment.zip 2>/dev/null || stat -f%z lambda-deployment.zip)
+        echo "Package size: $((SIZE / 1024 / 1024)) MB"
+        
+        if [ $SIZE -gt 52428800 ]; then
+          echo "Warning: Package size exceeds 50MB, will use S3 upload method"
+          echo "LARGE_PACKAGE=true" >> $GITHUB_ENV
+        else
+          echo "LARGE_PACKAGE=false" >> $GITHUB_ENV
+        fi
+
+    - name: Upload large package to S3 (if needed)
+      if: env.LARGE_PACKAGE == 'true'
+      run: |
+        cd "Backend/summoner-aws-backend"
+        
+        # Create unique S3 key
+        S3_KEY="lambda-deployments/summoner-backend-$(date +%Y%m%d-%H%M%S)-${GITHUB_SHA::7}.zip"
+        
+        # Upload to S3
+        aws s3 cp lambda-deployment.zip "s3://${{ secrets.S3_DEPLOYMENT_BUCKET }}/$S3_KEY"
+        
+        echo "S3_KEY=$S3_KEY" >> $GITHUB_ENV
+
+    - name: Deploy to Lambda (direct upload)
+      if: env.LARGE_PACKAGE == 'false'
+      run: |
+        cd "Backend/summoner-aws-backend"
+        
+        # Update function code
+        aws lambda update-function-code \
+          --function-name ${{ env.LAMBDA_FUNCTION_NAME }} \
+          --zip-file fileb://lambda-deployment.zip \
+          --region ${{ env.AWS_REGION }}
+
+    - name: Deploy to Lambda (S3 upload)
+      if: env.LARGE_PACKAGE == 'true'
+      run: |
+        # Update function code from S3
+        aws lambda update-function-code \
+          --function-name ${{ env.LAMBDA_FUNCTION_NAME }} \
+          --s3-bucket ${{ secrets.S3_DEPLOYMENT_BUCKET }} \
+          --s3-key ${{ env.S3_KEY }} \
+          --region ${{ env.AWS_REGION }}
+
+    - name: Update Lambda configuration
+      run: |
+        # Update function configuration if needed
+        aws lambda update-function-configuration \
+          --function-name ${{ env.LAMBDA_FUNCTION_NAME }} \
+          --runtime python${{ env.PYTHON_VERSION }} \
+          --timeout 30 \
+          --memory-size 512 \
+          --region ${{ env.AWS_REGION }} \
+          --environment Variables='{
+            "ENVIRONMENT":"production"
+          }' || echo "Configuration update failed, continuing..."
+
+    - name: Wait for deployment to complete
+      run: |
+        echo "Waiting for function update to complete..."
+        aws lambda wait function-updated \
+          --function-name ${{ env.LAMBDA_FUNCTION_NAME }} \
+          --region ${{ env.AWS_REGION }}
+
+    - name: Test deployment
+      run: |
+        # Test the Lambda function
+        echo "Testing Lambda function..."
+        aws lambda invoke \
+          --function-name ${{ env.LAMBDA_FUNCTION_NAME }} \
+          --payload '{"httpMethod": "GET", "path": "/", "headers": {}}' \
+          --region ${{ env.AWS_REGION }} \
+          response.json
+        
+        echo "Lambda response:"
+        cat response.json
+
+    - name: Clean up S3 deployment files (if used)
+      if: env.LARGE_PACKAGE == 'true' && always()
+      run: |
+        # Clean up old deployment files (keep last 5)
+        aws s3api list-objects-v2 \
+          --bucket ${{ secrets.S3_DEPLOYMENT_BUCKET }} \
+          --prefix "lambda-deployments/summoner-backend-" \
+          --query "sort_by(Contents, &LastModified)[:-5].Key" \
+          --output text | \
+        xargs -I {} aws s3 rm "s3://${{ secrets.S3_DEPLOYMENT_BUCKET }}/{}" || true
+
+    - name: Notify deployment status
+      if: always()
+      run: |
+        if [ ${{ job.status }} == 'success' ]; then
+          echo "✅ Lambda deployment successful!"
+          echo "Function: ${{ env.LAMBDA_FUNCTION_NAME }}"
+          echo "Region: ${{ env.AWS_REGION }}"
+          echo "Commit: ${GITHUB_SHA::7}"
+        else
+          echo "❌ Lambda deployment failed!"
+        fi
