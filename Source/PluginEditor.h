@@ -1,0 +1,62 @@
+#pragma once
+#include <JuceHeader.h>
+#include "PluginProcessor.h"
+#include "ChatBarComponent.h"
+#include "SerumInterfaceComponent.h"
+#include "SettingsComponent.h"
+#include "LoadingComponent.h"
+#include "LoginComponent.h"
+#include "LoginState.h"
+
+class SummonerXSerum2AudioProcessorEditor : public juce::AudioProcessorEditor, public juce::Timer
+{
+public:
+    SummonerXSerum2AudioProcessorEditor(SummonerXSerum2AudioProcessor&);
+    ~SummonerXSerum2AudioProcessorEditor() override;
+
+    void paint(juce::Graphics&) override;
+    void resized() override;
+    void showLoadingScreen(bool show);
+    void timerCallback() override;
+    void refreshAccessToken();
+
+private:
+    bool isLoading = false;
+    SummonerXSerum2AudioProcessor& audioProcessor;
+    juce::TabbedComponent tabs{ juce::TabbedButtonBar::TabsAtTop };
+    ChatBarComponent chatBar;
+    SettingsComponent settings;
+    std::unique_ptr<LoadingScreenManager> loadingManager;
+
+    LoginComponent login;
+    juce::ApplicationProperties appProps;
+    
+    // UI State Management
+    enum class UIState {
+        FirstTime,
+        LoggedOut,
+        LoggingIn,
+        LoggedIn
+    };
+    UIState currentUIState = UIState::FirstTime;
+    
+    // Welcome/Login Screen Components
+    juce::Label welcomeTitle;
+    juce::Label welcomeMessage;
+    juce::Label loggedOutTitle;
+    juce::Label loggedOutMessage;
+    juce::TextButton welcomeLoginButton;
+    juce::TextButton loggedOutLoginButton;
+
+    void loadPluginFromSettings(const juce::String& path);
+    void handleLogout();
+    void fetchAndUpdateCredits(const juce::String& accessToken);
+    void updateUIState();
+    void setupWelcomeScreen();
+    void setupLoggedOutScreen();
+    void startLoginProcess();
+    bool isFirstTimeUser();
+    void bringPluginToFront();
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SummonerXSerum2AudioProcessorEditor)
+};
