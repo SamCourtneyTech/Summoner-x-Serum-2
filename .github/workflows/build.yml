@@ -84,11 +84,26 @@ jobs:
         zip -r ../lambda-deployment.zip .
         cd ..
         
+        echo "📦 Deployment package size:"
+        ls -lh lambda-deployment.zip
+        
+        echo "🔍 Checking if Lambda function exists..."
+        aws lambda get-function \
+          --function-name summoner-aws-backend \
+          --region us-east-2 || {
+          echo "❌ Lambda function 'summoner-aws-backend' not found in us-east-2"
+          echo "Available functions:"
+          aws lambda list-functions --region us-east-2 --query 'Functions[].FunctionName'
+          exit 1
+        }
+        
+        echo "🚀 Updating Lambda function code..."
         aws lambda update-function-code \
           --function-name summoner-aws-backend \
           --zip-file fileb://lambda-deployment.zip \
-          --region us-east-2 || \
-        echo "⚠️ Lambda function may not exist yet. Create it manually first."
+          --region us-east-2
+        
+        echo "✅ Lambda function updated successfully!"
 
     - name: Test deployment
       run: |
