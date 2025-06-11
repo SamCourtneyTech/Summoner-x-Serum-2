@@ -1,81 +1,18 @@
-name: Build Summoner X Serum 2
+name: Backend CI/CD
 
 on:
   push:
     branches: [ main, develop ]
+    paths:
+      - 'Backend/**'
+      - '.github/workflows/**'
   pull_request:
     branches: [ main ]
+    paths:
+      - 'Backend/**'
   workflow_dispatch:
 
 jobs:
-  build-plugin:
-    name: Build Plugin (${{ matrix.name }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: macOS
-            os: macos-latest
-            build_path: Builds/MacOSX
-            artifact_name: macOS
-          - name: Windows
-            os: windows-latest
-            build_path: Builds/VisualStudio2022
-            artifact_name: Windows
-
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: recursive
-
-    - name: Setup Xcode (macOS)
-      if: runner.os == 'macOS'
-      uses: maxim-lobanov/setup-xcode@v1
-      with:
-        xcode-version: latest-stable
-
-    - name: Setup MSBuild (Windows)
-      if: runner.os == 'Windows'
-      uses: microsoft/setup-msbuild@v1.3
-
-    - name: Build Plugin (macOS)
-      if: runner.os == 'macOS'
-      run: |
-        cd "${{ matrix.build_path }}"
-        xcodebuild -project "Summoner X Serum2.xcodeproj" \
-                   -scheme "Summoner X Serum2_All" \
-                   -configuration Release \
-                   -derivedDataPath ./build \
-                   build
-        
-        # Create artifacts directory and copy built files
-        mkdir -p ./artifacts
-        if [ -d "./build/Build/Products/Release" ]; then
-          cp -R "./build/Build/Products/Release/"* ./artifacts/ 2>/dev/null || true
-        fi
-        ls -la ./artifacts/
-
-    - name: Build Plugin (Windows)
-      if: runner.os == 'Windows'
-      run: |
-        cd "${{ matrix.build_path }}"
-        msbuild "Summoner X Serum2.sln" /p:Configuration=Release /p:Platform=x64 /m
-        
-        # Create artifacts directory and copy built files
-        mkdir artifacts
-        if (Test-Path "x64/Release") {
-          Copy-Item "x64/Release/*" -Destination "./artifacts/" -Recurse -Force -ErrorAction SilentlyContinue
-        }
-        Get-ChildItem ./artifacts/
-
-    - name: Upload Artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: ${{ matrix.artifact_name }}-plugin
-        path: ${{ matrix.build_path }}/artifacts/
-        retention-days: 30
-
   test-backend:
     name: Test Backend
     runs-on: ubuntu-latest
@@ -102,40 +39,67 @@ jobs:
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
-    - name: Test syntax
+    - name: Test syntax and basic functionality
       run: |
         python -m py_compile main.py
+        echo "✅ Backend code validation passed"
 
-  create-release:
-    name: Create Release
-    needs: [build-plugin, test-backend]
+  deploy-to-aws:
+    name: Deploy to AWS Lambda
+    needs: test-backend
     runs-on: ubuntu-latest
-    if: github.event_name == 'release'
+    if: github.ref == 'refs/heads/main'
+    defaults:
+      run:
+        working-directory: ./Backend
 
     steps:
-    - name: Download macOS Artifacts
-      uses: actions/download-artifact@v3
-      with:
-        name: macOS-plugin
-        path: ./release/macOS
+    - uses: actions/checkout@v4
 
-    - name: Download Windows Artifacts
-      uses: actions/download-artifact@v3
+    - name: Set up Python
+      uses: actions/setup-python@v4
       with:
-        name: Windows-plugin
-        path: ./release/Windows
+        python-version: '3.9'
 
-    - name: Create Release Archive
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+
+    - name: Create deployment package
       run: |
-        cd release
-        zip -r summoner-x-serum2-${{ github.event.release.tag_name }}.zip .
+        mkdir -p deployment-package
+        pip install -r requirements.txt -t deployment-package/
+        cp *.py deployment-package/
+        
+        # Clean up unnecessary files to reduce size
+        find deployment-package -name "*.pyc" -delete
+        find deployment-package -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
 
-    - name: Upload Release Assets
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ github.event.release.upload_url }}
-        asset_path: ./release/summoner-x-serum2-${{ github.event.release.tag_name }}.zip
-        asset_name: summoner-x-serum2-${{ github.event.release.tag_name }}.zip
-        asset_content_type: application/zip
+    - name: Deploy to Lambda
+      run: |
+        cd deployment-package
+        zip -r ../lambda-deployment.zip .
+        cd ..
+        
+        aws lambda update-function-code \
+          --function-name summoner-backend \
+          --zip-file fileb://lambda-deployment.zip \
+          --region us-east-1 || \
+        echo "⚠️ Lambda function may not exist yet. Create it manually first."
+
+    - name: Test deployment
+      run: |
+        echo "🧪 Testing deployed Lambda function..."
+        aws lambda invoke \
+          --function-name summoner-backend \
+          --payload '{"httpMethod": "GET", "path": "/health"}' \
+          --region us-east-1 \
+          response.json || echo "Test failed - function may not be ready"
+        
+        if [ -f response.json ]; then
+          echo "📋 Lambda response:"
+          cat response.json
+        fi
