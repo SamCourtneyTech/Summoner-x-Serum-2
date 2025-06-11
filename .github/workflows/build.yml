@@ -66,7 +66,7 @@ jobs:
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: us-east-1
+        aws-region: us-east-2
 
     - name: Create deployment package
       run: |
@@ -85,18 +85,18 @@ jobs:
         cd ..
         
         aws lambda update-function-code \
-          --function-name summoner-backend \
+          --function-name summoner-aws-backend \
           --zip-file fileb://lambda-deployment.zip \
-          --region us-east-1 || \
+          --region us-east-2 || \
         echo "⚠️ Lambda function may not exist yet. Create it manually first."
 
     - name: Test deployment
       run: |
         echo "🧪 Testing deployed Lambda function..."
         aws lambda invoke \
-          --function-name summoner-backend \
+          --function-name summoner-aws-backend \
           --payload '{"httpMethod": "GET", "path": "/health"}' \
-          --region us-east-1 \
+          --region us-east-2 \
           response.json || echo "Test failed - function may not be ready"
         
         if [ -f response.json ]; then
