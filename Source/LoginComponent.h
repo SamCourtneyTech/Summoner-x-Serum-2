@@ -6,6 +6,9 @@ class LoginComponent : public juce::Component, public juce::Thread
 public:
     std::function<void(juce::String, int)> onLoginSuccess;
     void startLoginFlow();
+    void showEmailPasswordLogin();
+    void authenticateWithEmailPassword(const juce::String& email, const juce::String& password);
+    void fetchCreditsAndComplete(const juce::String& accessToken);
 
     LoginComponent() : juce::Thread("LoginComponent Server Thread")
     {

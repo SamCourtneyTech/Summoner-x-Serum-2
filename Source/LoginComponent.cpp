@@ -38,15 +38,130 @@ void LoginComponent::startLoginFlow()
     }
     else
     {
-        DBG("Opening Cognito login URL in browser");
-        cognitoUrl = juce::URL(
-            "https://us-east-2_pvCcMvaRP.auth.us-east-2.amazoncognito.com/login?"
-            "client_id=77ottlt6s5ntp1jup4av1r62m3&"
-            "redirect_uri=http://localhost:8000/callback&"
-            "response_type=code&"
-            "scope=email+openid+phone"
+        DBG("Showing email/password login form");
+        showEmailPasswordLogin();
+    }
+}
+
+void LoginComponent::showEmailPasswordLogin()
+{
+    auto alertWindow = std::make_unique<juce::AlertWindow>("Login", "Enter your credentials:", juce::AlertWindow::NoIcon);
+    alertWindow->addTextEditor("email", "", "Email:");
+    alertWindow->addTextEditor("password", "", "Password:", 0, true);
+    alertWindow->addButton("Login", 1, juce::KeyPress(juce::KeyPress::returnKey));
+    alertWindow->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
+    
+    alertWindow->enterModalState(true, juce::ModalCallbackFunction::create([this](int result) {
+        if (result == 1) // Login button pressed
+        {
+            auto email = static_cast<juce::AlertWindow*>(juce::Component::getCurrentlyModalComponent())->getTextEditorContents("email");
+            auto password = static_cast<juce::AlertWindow*>(juce::Component::getCurrentlyModalComponent())->getTextEditorContents("password");
+            
+            if (email.isNotEmpty() && password.isNotEmpty())
+            {
+                authenticateWithEmailPassword(email, password);
+            }
+        }
+    }), true);
+}
+
+void LoginComponent::authenticateWithEmailPassword(const juce::String& email, const juce::String& password)
+{
+    DBG("Authenticating with email: " + email);
+    juce::URL loginUrl("https://ydr97n8vxe.execute-api.us-east-2.amazonaws.com/prod/login");
+
+    // Create JSON body for email/password auth
+    juce::DynamicObject::Ptr jsonObject = new juce::DynamicObject();
+    jsonObject->setProperty("email", email);
+    jsonObject->setProperty("password", password);
+    juce::String postData = juce::JSON::toString(jsonObject.get());
+    DBG("Sending POST request to /login with email/password: " + postData);
+
+    // Set POST data and headers
+    juce::URL urlWithPostData = loginUrl.withPOSTData(postData);
+    auto options = juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inAddress)
+        .withExtraHeaders("Content-Type: application/json")
+        .withConnectionTimeoutMs(30000);
+
+    std::unique_ptr<juce::InputStream> stream(urlWithPostData.createInputStream(options));
+
+    if (stream != nullptr)
+    {
+        juce::String response = stream->readEntireStreamAsString();
+        DBG("Raw response from /login endpoint: " + response);
+        juce::var result = juce::JSON::parse(response);
+        
+        if (result.hasProperty("access_token") && result.hasProperty("id_token"))
+        {
+            juce::String accessToken = result["access_token"].toString();
+            juce::String idToken = result["id_token"].toString();
+            
+            // Store tokens and mark as logged in
+            appProps.getUserSettings()->setValue("accessToken", accessToken);
+            appProps.getUserSettings()->setValue("idToken", idToken);
+            appProps.getUserSettings()->setValue("isLoggedIn", true);
+            appProps.getUserSettings()->saveIfNeeded();
+            
+            // Get credits and trigger success
+            fetchCreditsAndComplete(accessToken);
+        }
+        else
+        {
+            DBG("Authentication failed: " + response);
+            juce::AlertWindow::showMessageBoxAsync(
+                juce::AlertWindow::WarningIcon,
+                "Login Failed",
+                "Invalid email or password. Please try again."
+            );
+        }
+    }
+    else
+    {
+        DBG("Failed to connect to server");
+        juce::AlertWindow::showMessageBoxAsync(
+            juce::AlertWindow::WarningIcon,
+            "Connection Failed", 
+            "Could not connect to server. Please check your internet connection."
         );
-        cognitoUrl.launchInDefaultBrowser();
-        startThread();
+    }
+}
+
+void LoginComponent::fetchCreditsAndComplete(const juce::String& accessToken)
+{
+    DBG("Fetching user credits with access token");
+    juce::URL url("https://ydr97n8vxe.execute-api.us-east-2.amazonaws.com/prod/get-credits");
+
+    auto options = juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inPostData)
+        .withExtraHeaders("Authorization: Bearer " + accessToken)
+        .withConnectionTimeoutMs(5000);
+
+    std::unique_ptr<juce::InputStream> stream(url.createInputStream(options));
+    int credits = 0;
+
+    if (stream != nullptr)
+    {
+        juce::String response = stream->readEntireStreamAsString();
+        DBG("Credits response: " + response);
+        juce::var result = juce::JSON::parse(response);
+        if (result.hasProperty("credits"))
+        {
+            credits = result["credits"].toString().getIntValue();
+        }
+    }
+
+    // Store credits and trigger success callback
+    appProps.getUserSettings()->setValue("credits", credits);
+    appProps.getUserSettings()->saveIfNeeded();
+
+    if (onLoginSuccess)
+    {
+        DBG("Login successful - triggering onLoginSuccess callback");
+        onLoginSuccess(accessToken, credits);
+        setVisible(false);
+        if (getParentComponent())
+        {
+            getParentComponent()->repaint();
+            getParentComponent()->resized();
+        }
     }
 }
