@@ -60,6 +60,7 @@ ChatBarComponent::ChatBarComponent(SummonerXSerum2AudioProcessor& p) : processor
 
     addAndMakeVisible(creditsLabel);
     creditsLabel.setText("Credits: 0", juce::dontSendNotification);
+    creditsLabel.setFont(juce::Font("Press Start 2P", 12.0f, juce::Font::plain));
     creditsLabel.setColour(juce::Label::textColourId, juce::Colours::white);
 
     sendButton.onClick = [this]() {
@@ -106,7 +107,7 @@ void ChatBarComponent::resized()
     auto yPosition = (getHeight() - chatBarHeight) / 2;
     chatInput.setBounds((getWidth() - chatBarWidth - buttonWidth - 10) / 2, yPosition + -50, chatBarWidth, chatBarHeight);
     sendButton.setBounds(chatInput.getRight() + 10, yPosition - 50, buttonWidth, chatBarHeight);
-    creditsLabel.setBounds(area.removeFromTop(30).reduced(10));
+    creditsLabel.setBounds(10, 20, 200, 30);
 }
 
 void ChatBarComponent::sendPromptToGenerateParameters(const juce::String& userPrompt)
@@ -258,6 +259,13 @@ void ChatBarComponent::sendAIResponseToProcessor(const std::map<std::string, std
 void ChatBarComponent::setCredits(int credits)
 {
     creditsLabel.setText("Credits: " + juce::String(credits), juce::dontSendNotification);
+    
+    // Set color to red if credits are 0, otherwise white
+    if (credits == 0) {
+        creditsLabel.setColour(juce::Label::textColourId, juce::Colours::red);
+    } else {
+        creditsLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+    }
 }
 
 int ChatBarComponent::fetchUserCredits()
