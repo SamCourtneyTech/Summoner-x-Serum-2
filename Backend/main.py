@@ -190,7 +190,7 @@ async def login(request: LoginRequest):
             sys.stdout.flush()
             
             # Use the Cognito /token endpoint to exchange the code
-            token_url = f"https://us-east-2pvccmvarp.auth.us-east-2.amazoncognito.com/oauth2/token"
+            token_url = f"https://us-east-2-pvccmvarp.auth.us-east-2.amazoncognito.com/oauth2/token"
             headers = {"Content-Type": "application/x-www-form-urlencoded"}
             
             # Cognito expects form-encoded data, not JSON
