@@ -71,9 +71,9 @@ SettingsComponent::SettingsComponent(SummonerXSerum2AudioProcessor& processor)
 
     logoutButton.setLookAndFeel(&customSettingsButtons);
     logoutButton.setButtonText("Logout");
-    logoutButton.setColour(juce::TextButton::buttonColourId, juce::Colours::whitesmoke);
-    logoutButton.setColour(juce::TextButton::textColourOnId, juce::Colours::darkgoldenrod);
-    logoutButton.setColour(juce::TextButton::textColourOffId, juce::Colours::black);
+    logoutButton.setColour(juce::TextButton::buttonColourId, juce::Colours::red);
+    logoutButton.setColour(juce::TextButton::textColourOnId, juce::Colours::white);
+    logoutButton.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
     logoutButton.onClick = [this]() {
         if (logoutButton.getButtonText() == "Logout" && onLogout) {
             onLogout();
