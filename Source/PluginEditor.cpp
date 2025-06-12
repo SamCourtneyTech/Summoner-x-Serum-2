@@ -31,7 +31,10 @@ SummonerXSerum2AudioProcessorEditor::SummonerXSerum2AudioProcessorEditor(Summone
     addAndMakeVisible(tabs);
     tabs.setVisible(false);
     
-    // Tab change detection will be handled in resized() method
+    // Set up tab change callback
+    tabs.onTabChanged = [this]() {
+        updateChatLoginOverlay();
+    };
     
     // Setup welcome and logged out screens
     setupWelcomeScreen();
@@ -129,8 +132,6 @@ SummonerXSerum2AudioProcessorEditor::SummonerXSerum2AudioProcessorEditor(Summone
         currentUIState = UIState::FirstTime;
     } else {
         currentUIState = UIState::LoggedOut;
-        // When logged out, show tabs but with chat login overlay
-        tabs.setVisible(true);
     }
     
     updateUIState();
@@ -176,16 +177,7 @@ void SummonerXSerum2AudioProcessorEditor::resized()
     loggedOutMessage.setBounds(welcomeArea.withHeight(40).withCentre(juce::Point<int>(centerX, centerY + 10)));
     loggedOutLoginButton.setBounds(welcomeArea.withHeight(40).withWidth(200).withCentre(juce::Point<int>(centerX, centerY + 60)));
     
-    // Check for tab changes
-    if (tabs.isVisible())
-    {
-        int currentTabIndex = tabs.getCurrentTabIndex();
-        if (currentTabIndex != lastTabIndex)
-        {
-            lastTabIndex = currentTabIndex;
-            updateChatLoginOverlay();
-        }
-    }
+    // Tab changes are now handled by the onTabChanged callback
 }
 
 void SummonerXSerum2AudioProcessorEditor::loadPluginFromSettings(const juce::String& path)
@@ -225,10 +217,21 @@ void SummonerXSerum2AudioProcessorEditor::handleLogout()
     appProps.getUserSettings()->save();
 
     chatBar.setCredits(0);
-    currentUIState = UIState::LoggedOut;
-    updateUIState();
     
-    DBG("User logged out - UI updated to LoggedOut state");
+    // Explicitly set to LoggedOut state (not FirstTime, since user has logged in before)
+    currentUIState = UIState::LoggedOut;
+    
+    // Switch to ChatGPT tab to show logout overlay
+    tabs.setCurrentTabIndex(0);
+    
+    // Make sure tabs are visible and overlay is shown
+    tabs.setVisible(true);
+    updateChatLoginOverlay();
+    
+    // Update settings button text
+    settings.updateLoginState(false);
+    
+    DBG("User logged out - showing tabs with ChatGPT overlay, tab switched to index 0");
     repaint();
     resized();
 }
@@ -351,27 +354,27 @@ void SummonerXSerum2AudioProcessorEditor::setupWelcomeScreen()
 
 void SummonerXSerum2AudioProcessorEditor::setupLoggedOutScreen()
 {
-    // Logged out title
+    // Logged out title - only used for chat overlay now
     loggedOutTitle.setText("Summoner x Serum 2", juce::dontSendNotification);
     loggedOutTitle.setFont(juce::Font("Press Start 2P", 28.0f, juce::Font::plain));
     loggedOutTitle.setColour(juce::Label::textColourId, juce::Colours::white);
     loggedOutTitle.setJustificationType(juce::Justification::centred);
-    addChildComponent(loggedOutTitle);
+    // Note: These are now added to chatLoginOverlay in setupChatLoginOverlay()
     
-    // Logged out message
+    // Logged out message - only used for chat overlay now
     loggedOutMessage.setText("You're currently logged out", juce::dontSendNotification);
     loggedOutMessage.setFont(juce::Font("Press Start 2P", 14.0f, juce::Font::plain));
     loggedOutMessage.setColour(juce::Label::textColourId, juce::Colours::lightgrey);
     loggedOutMessage.setJustificationType(juce::Justification::centred);
-    addChildComponent(loggedOutMessage);
+    // Note: These are now added to chatLoginOverlay in setupChatLoginOverlay()
     
-    // Logged out login button
+    // Logged out login button - only used for chat overlay now
     loggedOutLoginButton.setButtonText("Login");
     loggedOutLoginButton.setColour(juce::TextButton::buttonColourId, juce::Colours::darkblue);
     loggedOutLoginButton.setColour(juce::TextButton::textColourOnId, juce::Colours::white);
     loggedOutLoginButton.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
     loggedOutLoginButton.onClick = [this]() { startLoginProcess(); };
-    addChildComponent(loggedOutLoginButton);
+    // Note: These are now added to chatLoginOverlay in setupChatLoginOverlay()
 }
 
 void SummonerXSerum2AudioProcessorEditor::startLoginProcess()
@@ -392,10 +395,12 @@ void SummonerXSerum2AudioProcessorEditor::updateUIState()
     welcomeTitle.setVisible(false);
     welcomeMessage.setVisible(false);
     welcomeLoginButton.setVisible(false);
+    chatLoginOverlay.setVisible(false);
+    
+    // Always hide logged out components - they're only shown via chatLoginOverlay
     loggedOutTitle.setVisible(false);
     loggedOutMessage.setVisible(false);
     loggedOutLoginButton.setVisible(false);
-    chatLoginOverlay.setVisible(false);
     
     // Show appropriate components based on state
     switch (currentUIState)
@@ -417,6 +422,7 @@ void SummonerXSerum2AudioProcessorEditor::updateUIState()
             
         case UIState::LoggedIn:
             tabs.setVisible(true);
+            updateChatLoginOverlay(); // Ensure overlay is hidden when logged in
             break;
     }
     

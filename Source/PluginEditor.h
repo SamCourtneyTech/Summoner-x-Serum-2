@@ -21,9 +21,27 @@ public:
     void refreshAccessToken();
 
 private:
+    // Custom TabbedComponent to handle tab changes
+    class CustomTabbedComponent : public juce::TabbedComponent
+    {
+    public:
+        CustomTabbedComponent(juce::TabbedButtonBar::Orientation orientation)
+            : juce::TabbedComponent(orientation) {}
+        
+        std::function<void()> onTabChanged;
+        
+    protected:
+        void currentTabChanged(int newCurrentTabIndex, const juce::String& newCurrentTabName) override
+        {
+            juce::TabbedComponent::currentTabChanged(newCurrentTabIndex, newCurrentTabName);
+            if (onTabChanged)
+                onTabChanged();
+        }
+    };
+
     bool isLoading = false;
     SummonerXSerum2AudioProcessor& audioProcessor;
-    juce::TabbedComponent tabs{ juce::TabbedButtonBar::TabsAtTop };
+    CustomTabbedComponent tabs{ juce::TabbedButtonBar::TabsAtTop };
     ChatBarComponent chatBar;
     SettingsComponent settings;
     std::unique_ptr<LoadingScreenManager> loadingManager;
@@ -50,7 +68,6 @@ private:
     };
     ChatLoginOverlay chatLoginOverlay;
     UIState currentUIState = UIState::FirstTime;
-    int lastTabIndex = -1;
     
     // Welcome/Login Screen Components
     juce::Label welcomeTitle;

@@ -148,7 +148,7 @@ void SerumInterfaceComponent::prepareToPlay(double sampleRate, int samplesPerBlo
 void SerumInterfaceComponent::processMidiAndAudio(juce::AudioBuffer<float>& audioBuffer, juce::MidiBuffer& midiMessages, double sampleRate)
 {
     //DBG("processMidiAndAudio called!");
-    for (const auto metadata : midiMessages)
+    /*for (const auto metadata : midiMessages)
     {
         auto message = metadata.getMessage();
         if (message.isNoteOn())
@@ -156,6 +156,7 @@ void SerumInterfaceComponent::processMidiAndAudio(juce::AudioBuffer<float>& audi
         else if (message.isNoteOff())
             DBG("Note Off for Serum: " << message.getNoteNumber());
     }
+     */
     if (!midiMessages.isEmpty())
     {
         //DBG("MIDI buffer is not empty and forwarded correctly.");
