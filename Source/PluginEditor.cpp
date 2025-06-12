@@ -31,9 +31,12 @@ SummonerXSerum2AudioProcessorEditor::SummonerXSerum2AudioProcessorEditor(Summone
     addAndMakeVisible(tabs);
     tabs.setVisible(false);
     
+    // Tab change detection will be handled in resized() method
+    
     // Setup welcome and logged out screens
     setupWelcomeScreen();
     setupLoggedOutScreen();
+    setupChatLoginOverlay();
     
     // Don't add login component to visible yet - we'll manage state properly
     addChildComponent(login);
@@ -90,6 +93,10 @@ SummonerXSerum2AudioProcessorEditor::SummonerXSerum2AudioProcessorEditor(Summone
     settings.onLogout = [this]() {
         handleLogout();
         };
+    
+    settings.onLogin = [this]() {
+        startLoginProcess();
+        };
 
     settings.onPathChanged = [this](const juce::String& newPath) {
         DBG("onPathChanged triggered with path: " + newPath);
@@ -122,6 +129,8 @@ SummonerXSerum2AudioProcessorEditor::SummonerXSerum2AudioProcessorEditor(Summone
         currentUIState = UIState::FirstTime;
     } else {
         currentUIState = UIState::LoggedOut;
+        // When logged out, show tabs but with chat login overlay
+        tabs.setVisible(true);
     }
     
     updateUIState();
@@ -151,6 +160,7 @@ void SummonerXSerum2AudioProcessorEditor::resized()
     // Set bounds for all components
     login.setBounds(bounds);
     tabs.setBounds(bounds);
+    chatLoginOverlay.setBounds(bounds);
     
     // Welcome screen layout
     auto welcomeArea = bounds.reduced(50);
@@ -165,6 +175,17 @@ void SummonerXSerum2AudioProcessorEditor::resized()
     loggedOutTitle.setBounds(welcomeArea.withHeight(60).withCentre(juce::Point<int>(centerX, centerY - 40)));
     loggedOutMessage.setBounds(welcomeArea.withHeight(40).withCentre(juce::Point<int>(centerX, centerY + 10)));
     loggedOutLoginButton.setBounds(welcomeArea.withHeight(40).withWidth(200).withCentre(juce::Point<int>(centerX, centerY + 60)));
+    
+    // Check for tab changes
+    if (tabs.isVisible())
+    {
+        int currentTabIndex = tabs.getCurrentTabIndex();
+        if (currentTabIndex != lastTabIndex)
+        {
+            lastTabIndex = currentTabIndex;
+            updateChatLoginOverlay();
+        }
+    }
 }
 
 void SummonerXSerum2AudioProcessorEditor::loadPluginFromSettings(const juce::String& path)
@@ -218,6 +239,7 @@ void SummonerXSerum2AudioProcessorEditor::timerCallback()
     DBG("Timer callback triggered - validating token and updating credits");
     refreshAccessToken();
 }
+
 
 void SummonerXSerum2AudioProcessorEditor::refreshAccessToken()
 {
@@ -373,6 +395,7 @@ void SummonerXSerum2AudioProcessorEditor::updateUIState()
     loggedOutTitle.setVisible(false);
     loggedOutMessage.setVisible(false);
     loggedOutLoginButton.setVisible(false);
+    chatLoginOverlay.setVisible(false);
     
     // Show appropriate components based on state
     switch (currentUIState)
@@ -384,9 +407,8 @@ void SummonerXSerum2AudioProcessorEditor::updateUIState()
             break;
             
         case UIState::LoggedOut:
-            loggedOutTitle.setVisible(true);
-            loggedOutMessage.setVisible(true);
-            loggedOutLoginButton.setVisible(true);
+            tabs.setVisible(true);
+            updateChatLoginOverlay();
             break;
             
         case UIState::LoggingIn:
@@ -398,7 +420,46 @@ void SummonerXSerum2AudioProcessorEditor::updateUIState()
             break;
     }
     
+    // Update settings button text
+    settings.updateLoginState(currentUIState == UIState::LoggedIn);
+    
     DBG("UI State updated to: " + juce::String((int)currentUIState));
+}
+
+void SummonerXSerum2AudioProcessorEditor::setupChatLoginOverlay()
+{
+    chatLoginOverlay.addChildComponent(loggedOutTitle);
+    chatLoginOverlay.addChildComponent(loggedOutMessage);
+    chatLoginOverlay.addChildComponent(loggedOutLoginButton);
+    addChildComponent(chatLoginOverlay);
+}
+
+void SummonerXSerum2AudioProcessorEditor::updateChatLoginOverlay()
+{
+    if (currentUIState == UIState::LoggedOut && tabs.getCurrentTabIndex() == 0)
+    {
+        chatLoginOverlay.setVisible(true);
+        loggedOutTitle.setVisible(true);
+        loggedOutMessage.setVisible(true);
+        loggedOutLoginButton.setVisible(true);
+        
+        // Position overlay over the chat tab content
+        auto tabContentArea = tabs.getTabContentComponent(0)->getBounds();
+        chatLoginOverlay.setBounds(tabContentArea);
+        
+        // Center the login elements within the chat tab
+        auto overlayBounds = chatLoginOverlay.getLocalBounds().reduced(50);
+        auto centerX = overlayBounds.getCentreX();
+        auto centerY = overlayBounds.getCentreY();
+        
+        loggedOutTitle.setBounds(overlayBounds.withHeight(60).withCentre(juce::Point<int>(centerX, centerY - 40)));
+        loggedOutMessage.setBounds(overlayBounds.withHeight(40).withCentre(juce::Point<int>(centerX, centerY + 10)));
+        loggedOutLoginButton.setBounds(overlayBounds.withHeight(40).withWidth(200).withCentre(juce::Point<int>(centerX, centerY + 60)));
+    }
+    else
+    {
+        chatLoginOverlay.setVisible(false);
+    }
 }
 
 void SummonerXSerum2AudioProcessorEditor::bringPluginToFront()

@@ -25,6 +25,9 @@ public:
     juce::String getPluginPath() const;
 
     std::function<void()> onLogout;
+    std::function<void()> onLogin;
+    
+    void updateLoginState(bool isLoggedIn);
 
 
 private:

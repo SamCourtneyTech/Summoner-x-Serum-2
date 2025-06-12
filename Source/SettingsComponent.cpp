@@ -75,8 +75,11 @@ SettingsComponent::SettingsComponent(SummonerXSerum2AudioProcessor& processor)
     logoutButton.setColour(juce::TextButton::textColourOnId, juce::Colours::darkgoldenrod);
     logoutButton.setColour(juce::TextButton::textColourOffId, juce::Colours::black);
     logoutButton.onClick = [this]() {
-        if (onLogout)
+        if (logoutButton.getButtonText() == "Logout" && onLogout) {
             onLogout();
+        } else if (logoutButton.getButtonText() == "Login" && onLogin) {
+            onLogin();
+        }
         };
     addAndMakeVisible(logoutButton);
 }
@@ -214,4 +217,13 @@ juce::String SettingsComponent::loadSavedPath()
     juce::String path = userSettings->getValue("pluginPath", defaultPath);
     DBG("Loaded saved path: " << path);
     return path;
+}
+
+void SettingsComponent::updateLoginState(bool isLoggedIn)
+{
+    if (isLoggedIn) {
+        logoutButton.setButtonText("Logout");
+    } else {
+        logoutButton.setButtonText("Login");
+    }
 }

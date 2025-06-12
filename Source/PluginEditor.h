@@ -38,7 +38,19 @@ private:
         LoggingIn,
         LoggedIn
     };
+    
+    // Chat-specific login overlay
+    class ChatLoginOverlay : public juce::Component
+    {
+    public:
+        void paint(juce::Graphics& g) override
+        {
+            g.fillAll(juce::Colours::black);
+        }
+    };
+    ChatLoginOverlay chatLoginOverlay;
     UIState currentUIState = UIState::FirstTime;
+    int lastTabIndex = -1;
     
     // Welcome/Login Screen Components
     juce::Label welcomeTitle;
@@ -54,9 +66,11 @@ private:
     void updateUIState();
     void setupWelcomeScreen();
     void setupLoggedOutScreen();
+    void setupChatLoginOverlay();
     void startLoginProcess();
     bool isFirstTimeUser();
     void bringPluginToFront();
+    void updateChatLoginOverlay();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SummonerXSerum2AudioProcessorEditor)
 };
