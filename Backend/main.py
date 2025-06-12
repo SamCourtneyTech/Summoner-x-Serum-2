@@ -557,4 +557,4 @@ def handler(event, context):
         return webhook_handler(event, context)
     return Mangum(app)(event, context)
 
-# Test comment to trigger CI/CD deployment - added detailed login debugging
+# Test comment to trigger CI/CD deployment - fixed token URL format
