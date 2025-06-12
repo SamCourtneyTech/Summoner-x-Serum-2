@@ -68,6 +68,7 @@ private:
     };
     ChatLoginOverlay chatLoginOverlay;
     UIState currentUIState = UIState::FirstTime;
+    bool loginInitiatedFromSettings = false;
     
     // Welcome/Login Screen Components
     juce::Label welcomeTitle;

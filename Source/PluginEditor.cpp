@@ -84,6 +84,13 @@ SummonerXSerum2AudioProcessorEditor::SummonerXSerum2AudioProcessorEditor(Summone
         
         updateUIState();
         
+        // If login was initiated from settings, redirect to chatbar tab
+        if (loginInitiatedFromSettings) {
+            tabs.setCurrentTabIndex(0); // 0 is the ChatGPT tab
+            loginInitiatedFromSettings = false; // Reset the flag
+            DBG("Login initiated from settings - redirecting to chatbar tab");
+        }
+        
         DBG("Login successful - UI updated to LoggedIn state");
         
         // Bring plugin window to front after successful login
@@ -98,6 +105,7 @@ SummonerXSerum2AudioProcessorEditor::SummonerXSerum2AudioProcessorEditor(Summone
         };
     
     settings.onLogin = [this]() {
+        loginInitiatedFromSettings = true;
         startLoginProcess();
         };
 
