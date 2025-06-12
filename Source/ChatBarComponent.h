@@ -15,6 +15,8 @@ public:
     void setCredits(int credits);
     void showCreditsModal();
     void mouseDown(const juce::MouseEvent& event) override;
+    void mouseEnter(const juce::MouseEvent& event) override;
+    void mouseExit(const juce::MouseEvent& event) override;
 
 private:
     // Custom Credits Modal
@@ -60,6 +62,7 @@ private:
     juce::Label creditsLabel;
     juce::ApplicationProperties appProps;
     bool requestInProgress = false;
+    bool creditsLabelHovered = false;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ChatBarComponent)
 };

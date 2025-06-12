@@ -100,6 +100,14 @@ ChatBarComponent::~ChatBarComponent()
 void ChatBarComponent::paint(juce::Graphics& g)
 {
     g.fillAll(juce::Colours::black);
+    
+    // Draw hover background for credits label
+    if (creditsLabelHovered)
+    {
+        auto creditsBounds = creditsLabel.getBounds();
+        g.setColour(juce::Colours::darkgrey.withAlpha(0.5f));
+        g.fillRoundedRectangle(creditsBounds.toFloat().expanded(5), 3.0f);
+    }
 }
 
 void ChatBarComponent::resized()
@@ -310,6 +318,24 @@ void ChatBarComponent::mouseDown(const juce::MouseEvent& event)
     }
 }
 
+void ChatBarComponent::mouseEnter(const juce::MouseEvent& event)
+{
+    if (event.originalComponent == &creditsLabel)
+    {
+        creditsLabelHovered = true;
+        repaint();
+    }
+}
+
+void ChatBarComponent::mouseExit(const juce::MouseEvent& event)
+{
+    if (event.originalComponent == &creditsLabel)
+    {
+        creditsLabelHovered = false;
+        repaint();
+    }
+}
+
 void ChatBarComponent::showCreditsModal()
 {
     if (creditsModal == nullptr)
@@ -360,7 +386,7 @@ ChatBarComponent::CreditsModalWindow::CreditsModalWindow()
                      "synthesizer preset based on your description.\n\n"
                      "Need more credits? Click the button below to purchase additional credits.",
                      juce::dontSendNotification);
-    infoLabel.setFont(juce::Font("Press Start 2P", 10.0f, juce::Font::plain));
+    infoLabel.setFont(juce::Font("Press Start 2P", 12.0f, juce::Font::plain));
     infoLabel.setColour(juce::Label::textColourId, juce::Colours::black);
     infoLabel.setJustificationType(juce::Justification::centred);
     
