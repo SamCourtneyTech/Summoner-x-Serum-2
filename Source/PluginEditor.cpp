@@ -161,7 +161,7 @@ void SummonerXSerum2AudioProcessorEditor::resized()
     // Set bounds for all components
     login.setBounds(bounds);
     tabs.setBounds(bounds);
-    chatLoginOverlay.setBounds(bounds);
+    // chatLoginOverlay bounds are handled by updateChatLoginOverlay()
     
     // Welcome screen layout
     auto welcomeArea = bounds.reduced(50);
@@ -178,6 +178,8 @@ void SummonerXSerum2AudioProcessorEditor::resized()
     loggedOutLoginButton.setBounds(welcomeArea.withHeight(40).withWidth(200).withCentre(juce::Point<int>(centerX, centerY + 60)));
     
     // Tab changes are now handled by the onTabChanged callback
+    // Update chat overlay positioning after resize
+    updateChatLoginOverlay();
 }
 
 void SummonerXSerum2AudioProcessorEditor::loadPluginFromSettings(const juce::String& path)
@@ -218,20 +220,20 @@ void SummonerXSerum2AudioProcessorEditor::handleLogout()
 
     chatBar.setCredits(0);
     
-    // Explicitly set to LoggedOut state (not FirstTime, since user has logged in before)
+    // Set to LoggedOut state to show overlay on ChatGPT tab only
     currentUIState = UIState::LoggedOut;
     
-    // Switch to ChatGPT tab to show logout overlay
+    // Switch to ChatGPT tab
     tabs.setCurrentTabIndex(0);
     
-    // Make sure tabs are visible and overlay is shown
+    // Make sure tabs are visible and overlay is shown on ChatGPT tab
     tabs.setVisible(true);
     updateChatLoginOverlay();
     
     // Update settings button text
     settings.updateLoginState(false);
     
-    DBG("User logged out - showing tabs with ChatGPT overlay, tab switched to index 0");
+    DBG("User logged out - showing ChatGPT tab with overlay, other tabs remain accessible");
     repaint();
     resized();
 }
