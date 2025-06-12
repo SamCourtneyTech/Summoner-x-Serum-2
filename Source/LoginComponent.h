@@ -10,7 +10,10 @@ public:
     LoginComponent() : juce::Thread("LoginComponent Server Thread")
     {
         addAndMakeVisible(loginLabel);
-        loginLabel.setText("Logging you in... Please complete the login in your browser.", juce::dontSendNotification);
+        loginLabel.setText("Keep this page open. Sign-in in progress... ", juce::dontSendNotification);
+        loginLabel.setFont(juce::Font("Press Start 2P", 16.0f, juce::Font::plain));
+        loginLabel.setJustificationType(juce::Justification::centred);
+        loginLabel.setColour(juce::Label::textColourId, juce::Colours::white);
 
         juce::PropertiesFile::Options options;
         options.applicationName = "SummonerXSerum2";
@@ -35,7 +38,8 @@ public:
 
     void resized() override
     {
-        loginLabel.setBounds(getLocalBounds().reduced(100));
+        auto bounds = getLocalBounds();
+        loginLabel.setBounds(bounds);
     }
 
     void run() override
