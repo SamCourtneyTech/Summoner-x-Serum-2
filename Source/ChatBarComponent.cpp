@@ -370,6 +370,7 @@ ChatBarComponent::CreditsModalWindow::CreditsModalWindow()
     purchaseButton.setColour(juce::TextButton::buttonColourId, juce::Colours::darkblue);
     purchaseButton.setColour(juce::TextButton::textColourOnId, juce::Colours::white);
     purchaseButton.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
+    purchaseButton.setLookAndFeel(&purchaseButtonLookAndFeel);
     purchaseButton.onClick = [this]() {
         if (onPurchaseClicked)
             onPurchaseClicked();
@@ -381,8 +382,8 @@ void ChatBarComponent::CreditsModalWindow::paint(juce::Graphics& g)
     // Semi-transparent overlay
     g.fillAll(juce::Colours::black.withAlpha(0.7f));
     
-    // Modal window background
-    auto modalBounds = getLocalBounds().reduced(100).withSizeKeepingCentre(400, 300);
+    // Modal window background - made larger
+    auto modalBounds = getLocalBounds().reduced(60).withSizeKeepingCentre(600, 450);
     g.setColour(juce::Colours::lightgrey);
     g.fillRect(modalBounds);
     
@@ -393,17 +394,17 @@ void ChatBarComponent::CreditsModalWindow::paint(juce::Graphics& g)
 
 void ChatBarComponent::CreditsModalWindow::resized()
 {
-    auto modalBounds = getLocalBounds().reduced(100).withSizeKeepingCentre(400, 300);
+    auto modalBounds = getLocalBounds().reduced(60).withSizeKeepingCentre(600, 450);
     
     // Close button in top-right
-    closeButton.setBounds(modalBounds.getRight() - 30, modalBounds.getY() + 10, 20, 20);
+    closeButton.setBounds(modalBounds.getRight() - 35, modalBounds.getY() + 15, 25, 25);
     
     // Title
-    titleLabel.setBounds(modalBounds.getX() + 20, modalBounds.getY() + 20, modalBounds.getWidth() - 40, 30);
+    titleLabel.setBounds(modalBounds.getX() + 30, modalBounds.getY() + 30, modalBounds.getWidth() - 60, 40);
     
-    // Info text
-    infoLabel.setBounds(modalBounds.getX() + 20, modalBounds.getY() + 60, modalBounds.getWidth() - 40, 160);
+    // Info text - larger area for better text spacing
+    infoLabel.setBounds(modalBounds.getX() + 30, modalBounds.getY() + 90, modalBounds.getWidth() - 60, 280);
     
     // Purchase button
-    purchaseButton.setBounds(modalBounds.getCentreX() - 75, modalBounds.getBottom() - 50, 150, 30);
+    purchaseButton.setBounds(modalBounds.getCentreX() - 100, modalBounds.getBottom() - 60, 200, 35);
 }

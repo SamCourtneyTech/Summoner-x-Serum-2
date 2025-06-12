@@ -28,6 +28,21 @@ private:
         std::function<void()> onPurchaseClicked;
         
     private:
+        class PurchaseButtonLookAndFeel : public juce::LookAndFeel_V4
+        {
+        public:
+            void drawButtonText(juce::Graphics& g, juce::TextButton& button,
+                bool /*isMouseOverButton*/, bool /*isButtonDown*/) override
+            {
+                auto font = juce::Font("Press Start 2P", 12.0f, juce::Font::plain);
+                g.setFont(font);
+                g.setColour(button.findColour(juce::TextButton::textColourOffId));
+                g.drawFittedText(button.getButtonText(), button.getLocalBounds(),
+                    juce::Justification::centred, 1);
+            }
+        };
+        
+        PurchaseButtonLookAndFeel purchaseButtonLookAndFeel;
         juce::TextButton closeButton;
         juce::Label titleLabel;
         juce::Label infoLabel;
