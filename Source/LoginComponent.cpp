@@ -47,7 +47,8 @@ void LoginComponent::showEmailPasswordLogin()
 {
     auto alertWindow = std::make_unique<juce::AlertWindow>("Login", "Enter your credentials:", juce::AlertWindow::NoIcon);
     alertWindow->addTextEditor("email", "", "Email:");
-    alertWindow->addTextEditor("password", "", "Password:", 0, true);
+    alertWindow->addTextEditor("password", "", "Password:");
+    alertWindow->getTextEditor("password")->setPasswordCharacter('*');
     alertWindow->addButton("Login", 1, juce::KeyPress(juce::KeyPress::returnKey));
     alertWindow->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
     
