@@ -223,7 +223,9 @@ void SettingsComponent::updateLoginState(bool isLoggedIn)
 {
     if (isLoggedIn) {
         logoutButton.setButtonText("Logout");
+        logoutButton.setColour(juce::TextButton::buttonColourId, juce::Colours::red);
     } else {
         logoutButton.setButtonText("Login");
+        logoutButton.setColour(juce::TextButton::buttonColourId, juce::Colours::blue);
     }
 }
