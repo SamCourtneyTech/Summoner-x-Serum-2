@@ -62,6 +62,10 @@ ChatBarComponent::ChatBarComponent(SummonerXSerum2AudioProcessor& p) : processor
     creditsLabel.setText("Credits: 0", juce::dontSendNotification);
     creditsLabel.setFont(juce::Font("Press Start 2P", 12.0f, juce::Font::plain));
     creditsLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+    
+    // Make credits label clickable
+    creditsLabel.setInterceptsMouseClicks(true, false);
+    creditsLabel.addMouseListener(this, false);
 
     sendButton.onClick = [this]() {
         if (requestInProgress)
@@ -296,4 +300,36 @@ int ChatBarComponent::fetchUserCredits()
     }
     DBG("Failed to fetch credits: No response from server");
     return 0;
+}
+
+void ChatBarComponent::mouseDown(const juce::MouseEvent& event)
+{
+    if (event.originalComponent == &creditsLabel)
+    {
+        showCreditsModal();
+    }
+}
+
+void ChatBarComponent::showCreditsModal()
+{
+    juce::AlertWindow::showMessageBoxAsync(
+        juce::AlertWindow::InfoIcon,
+        "Credits Information",
+        "Credits are used to generate custom Serum presets with AI.\n\n"
+        "Each prompt you submit consumes 1 credit and creates a unique\n"
+        "synthesizer preset based on your description.\n\n"
+        "Need more credits? Click the button below to purchase additional credits.",
+        "Purchase Credits",
+        nullptr,
+        juce::ModalCallbackFunction::create([](int result) {
+            if (result == 1) // User clicked "Purchase Credits"
+            {
+                // Placeholder for purchase credits functionality
+                juce::AlertWindow::showMessageBoxAsync(
+                    juce::AlertWindow::InfoIcon,
+                    "Purchase Credits",
+                    "Credit purchasing functionality will be implemented soon!");
+            }
+        })
+    );
 }

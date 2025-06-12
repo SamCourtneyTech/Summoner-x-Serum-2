@@ -13,6 +13,8 @@ public:
     void paint(juce::Graphics&) override;
     void resized() override;
     void setCredits(int credits);
+    void showCreditsModal();
+    void mouseDown(const juce::MouseEvent& event) override;
 
 private:
     void sendPromptToGenerateParameters(const juce::String& userPrompt);
