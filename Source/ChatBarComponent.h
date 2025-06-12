@@ -17,6 +17,24 @@ public:
     void mouseDown(const juce::MouseEvent& event) override;
 
 private:
+    // Custom Credits Modal
+    class CreditsModalWindow : public juce::Component
+    {
+    public:
+        CreditsModalWindow();
+        void paint(juce::Graphics& g) override;
+        void resized() override;
+        std::function<void()> onCloseClicked;
+        std::function<void()> onPurchaseClicked;
+        
+    private:
+        juce::TextButton closeButton;
+        juce::Label titleLabel;
+        juce::Label infoLabel;
+        juce::TextButton purchaseButton;
+    };
+    
+    std::unique_ptr<CreditsModalWindow> creditsModal;
     void sendPromptToGenerateParameters(const juce::String& userPrompt);
     void sendAIResponseToProcessor(const std::map<std::string, std::string>& aiResponse);
     int fetchUserCredits();  // Add declaration here

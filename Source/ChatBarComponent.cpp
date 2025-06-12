@@ -312,24 +312,98 @@ void ChatBarComponent::mouseDown(const juce::MouseEvent& event)
 
 void ChatBarComponent::showCreditsModal()
 {
-    juce::AlertWindow::showMessageBoxAsync(
-        juce::AlertWindow::InfoIcon,
-        "Credits Information",
-        "Credits are used to generate custom Serum presets with AI.\n\n"
-        "Each prompt you submit consumes 1 credit and creates a unique\n"
-        "synthesizer preset based on your description.\n\n"
-        "Need more credits? Click the button below to purchase additional credits.",
-        "Purchase Credits",
-        nullptr,
-        juce::ModalCallbackFunction::create([](int result) {
-            if (result == 1) // User clicked "Purchase Credits"
-            {
-                // Placeholder for purchase credits functionality
-                juce::AlertWindow::showMessageBoxAsync(
-                    juce::AlertWindow::InfoIcon,
-                    "Purchase Credits",
-                    "Credit purchasing functionality will be implemented soon!");
-            }
-        })
-    );
+    if (creditsModal == nullptr)
+    {
+        creditsModal = std::make_unique<CreditsModalWindow>();
+        creditsModal->onCloseClicked = [this]() {
+            creditsModal->setVisible(false);
+            removeChildComponent(creditsModal.get());
+        };
+        creditsModal->onPurchaseClicked = [this]() {
+            juce::AlertWindow::showMessageBoxAsync(
+                juce::AlertWindow::InfoIcon,
+                "Purchase Credits",
+                "Credit purchasing functionality will be implemented soon!");
+        };
+    }
+    
+    addAndMakeVisible(creditsModal.get());
+    creditsModal->setBounds(getLocalBounds());
+    creditsModal->toFront(true);
+}
+
+// CreditsModalWindow Implementation
+ChatBarComponent::CreditsModalWindow::CreditsModalWindow()
+{
+    // Close button (red X)
+    addAndMakeVisible(closeButton);
+    closeButton.setButtonText("X");
+    closeButton.setColour(juce::TextButton::buttonColourId, juce::Colours::red);
+    closeButton.setColour(juce::TextButton::textColourOnId, juce::Colours::white);
+    closeButton.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
+    closeButton.onClick = [this]() {
+        if (onCloseClicked)
+            onCloseClicked();
+    };
+    
+    // Title label
+    addAndMakeVisible(titleLabel);
+    titleLabel.setText("Credits Information", juce::dontSendNotification);
+    titleLabel.setFont(juce::Font("Press Start 2P", 16.0f, juce::Font::plain));
+    titleLabel.setColour(juce::Label::textColourId, juce::Colours::black);
+    titleLabel.setJustificationType(juce::Justification::centred);
+    
+    // Info label
+    addAndMakeVisible(infoLabel);
+    infoLabel.setText("Credits are used to generate custom Serum presets with AI.\n\n"
+                     "Each prompt you submit consumes 1 credit and creates a unique\n"
+                     "synthesizer preset based on your description.\n\n"
+                     "Need more credits? Click the button below to purchase additional credits.",
+                     juce::dontSendNotification);
+    infoLabel.setFont(juce::Font("Press Start 2P", 10.0f, juce::Font::plain));
+    infoLabel.setColour(juce::Label::textColourId, juce::Colours::black);
+    infoLabel.setJustificationType(juce::Justification::centred);
+    
+    // Purchase button
+    addAndMakeVisible(purchaseButton);
+    purchaseButton.setButtonText("Purchase Credits");
+    purchaseButton.setColour(juce::TextButton::buttonColourId, juce::Colours::darkblue);
+    purchaseButton.setColour(juce::TextButton::textColourOnId, juce::Colours::white);
+    purchaseButton.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
+    purchaseButton.onClick = [this]() {
+        if (onPurchaseClicked)
+            onPurchaseClicked();
+    };
+}
+
+void ChatBarComponent::CreditsModalWindow::paint(juce::Graphics& g)
+{
+    // Semi-transparent overlay
+    g.fillAll(juce::Colours::black.withAlpha(0.7f));
+    
+    // Modal window background
+    auto modalBounds = getLocalBounds().reduced(100).withSizeKeepingCentre(400, 300);
+    g.setColour(juce::Colours::lightgrey);
+    g.fillRect(modalBounds);
+    
+    // Border
+    g.setColour(juce::Colours::black);
+    g.drawRect(modalBounds, 2);
+}
+
+void ChatBarComponent::CreditsModalWindow::resized()
+{
+    auto modalBounds = getLocalBounds().reduced(100).withSizeKeepingCentre(400, 300);
+    
+    // Close button in top-right
+    closeButton.setBounds(modalBounds.getRight() - 30, modalBounds.getY() + 10, 20, 20);
+    
+    // Title
+    titleLabel.setBounds(modalBounds.getX() + 20, modalBounds.getY() + 20, modalBounds.getWidth() - 40, 30);
+    
+    // Info text
+    infoLabel.setBounds(modalBounds.getX() + 20, modalBounds.getY() + 60, modalBounds.getWidth() - 40, 160);
+    
+    // Purchase button
+    purchaseButton.setBounds(modalBounds.getCentreX() - 75, modalBounds.getBottom() - 50, 150, 30);
 }
