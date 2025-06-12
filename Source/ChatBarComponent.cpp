@@ -105,8 +105,20 @@ void ChatBarComponent::paint(juce::Graphics& g)
     if (creditsLabelHovered)
     {
         auto creditsBounds = creditsLabel.getBounds();
-        g.setColour(juce::Colours::darkgrey.withAlpha(0.5f));
-        g.fillRoundedRectangle(creditsBounds.toFloat().expanded(5), 3.0f);
+        auto font = creditsLabel.getFont();
+        auto textWidth = font.getStringWidth(creditsLabel.getText());
+        auto textHeight = font.getHeight();
+        
+        // Create bounds around the actual text with more visible padding
+        juce::Rectangle<float> textBounds(
+            creditsBounds.getX() - 2, 
+            creditsBounds.getY() + (creditsBounds.getHeight() - textHeight) / 2 - 3,
+            textWidth + 8, 
+            textHeight + 6
+        );
+        
+        g.setColour(juce::Colours::grey);
+        g.fillRoundedRectangle(textBounds, 3.0f);
     }
 }
 
