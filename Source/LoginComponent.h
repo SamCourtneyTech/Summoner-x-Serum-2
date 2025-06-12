@@ -6,9 +6,6 @@ class LoginComponent : public juce::Component, public juce::Thread
 public:
     std::function<void(juce::String, int)> onLoginSuccess;
     void startLoginFlow();
-    void showEmailPasswordLogin();
-    void authenticateWithEmailPassword(const juce::String& email, const juce::String& password);
-    void fetchCreditsAndComplete(const juce::String& accessToken);
 
     LoginComponent() : juce::Thread("LoginComponent Server Thread")
     {
@@ -231,7 +228,7 @@ private:
                 juce::String savedToken = appProps.getUserSettings()->getValue("accessToken", "");
                 juce::String savedIdToken = appProps.getUserSettings()->getValue("idToken", "");
                 bool savedLoginState = appProps.getUserSettings()->getBoolValue("isLoggedIn", false);
-                DBG("LoginComponent validation - saved access token length: " << savedToken.length() 
+                DBG("LoginComponent validation - saved access token length: " << savedToken.length()
                     << ", saved ID token length: " << savedIdToken.length()
                     << ", isLoggedIn: " << (savedLoginState ? "true" : "false"));
                 

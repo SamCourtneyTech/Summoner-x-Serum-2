@@ -177,22 +177,17 @@ async def signup(request: LoginRequest):
 
 @app.post("/login")
 async def login(request: LoginRequest):
-    logger.info("=== LOGIN REQUEST START ===")
     logger.info("Received login request: %s", request.dict())
-    print("=== LOGIN REQUEST START ===")
     print("Received login request:", request.dict())
     sys.stdout.flush()
-    
     if request.code and request.redirect_uri:
         try:
             logger.info("Exchanging authorization code: %s with redirect_uri: %s", request.code, request.redirect_uri)
             print("Exchanging authorization code:", request.code, "with redirect_uri:", request.redirect_uri)
             sys.stdout.flush()
-            
             # Use the Cognito /token endpoint to exchange the code
-            token_url = f"https://us-east-2_pvCcMvaRP.auth.us-east-2.amazoncognito.com/oauth2/token"
+            token_url = f"https://us-east-2pvccmvarp.auth.us-east-2.amazoncognito.com/oauth2/token"
             headers = {"Content-Type": "application/x-www-form-urlencoded"}
-            
             # Cognito expects form-encoded data, not JSON
             data = {
                 "grant_type": "authorization_code",
@@ -200,78 +195,35 @@ async def login(request: LoginRequest):
                 "code": request.code,
                 "redirect_uri": request.redirect_uri
             }
-            
-            logger.info("Token URL: %s", token_url)
-            logger.info("Headers: %s", headers)
-            logger.info("Data: %s", data)
-            print("Token URL:", token_url)
-            print("Headers:", headers)
-            print("Data:", data)
+            logger.info("Sending token request to Cognito with data: %s", data)
+            print("Sending token request to Cognito with data:", data)
             sys.stdout.flush()
-            
-            logger.info("Making request to Cognito token endpoint...")
-            print("Making request to Cognito token endpoint...")
+            response = requests.post(token_url, headers=headers, data=data)
+            response_json = response.json()
+            logger.info("Token endpoint response status: %d, body: %s", response.status_code, response_json)
+            print("Token endpoint response status:", response.status_code, "body:", response_json)
             sys.stdout.flush()
-            
-            response = requests.post(token_url, headers=headers, data=data, timeout=30)
-            
-            logger.info("Response received - Status: %d", response.status_code)
-            print("Response received - Status:", response.status_code)
-            sys.stdout.flush()
-            
-            try:
-                response_json = response.json()
-                logger.info("Response JSON: %s", response_json)
-                print("Response JSON:", response_json)
-                sys.stdout.flush()
-            except Exception as json_error:
-                logger.error("Failed to parse response as JSON: %s", str(json_error))
-                logger.error("Raw response text: %s", response.text)
-                print("Failed to parse response as JSON:", str(json_error))
-                print("Raw response text:", response.text)
-                sys.stdout.flush()
-                raise HTTPException(status_code=500, detail=f"Invalid JSON response from Cognito: {response.text}")
-            
             if response.status_code != 200:
                 logger.error("Token endpoint failed with status %d: %s", response.status_code, response_json)
                 print("Token endpoint failed with status", response.status_code, ":", response_json)
                 sys.stdout.flush()
-                error_detail = response_json.get("error_description", response_json.get("error", "Failed to exchange code"))
-                raise HTTPException(status_code=400, detail=error_detail)
-            
+                raise HTTPException(status_code=400, detail=response_json.get("error_description", "Failed to exchange code"))
             access_token = response_json.get("access_token")
             id_token = response_json.get("id_token")
-            
-            logger.info("Access token present: %s", bool(access_token))
-            logger.info("ID token present: %s", bool(id_token))
-            print("Access token present:", bool(access_token))
-            print("ID token present:", bool(id_token))
-            sys.stdout.flush()
-            
             if not access_token or not id_token:
                 logger.error("AccessToken or IdToken missing in token response: %s", response_json)
                 print("AccessToken or IdToken missing in token response:", response_json)
                 sys.stdout.flush()
                 raise HTTPException(status_code=400, detail="AccessToken or IdToken missing")
-            
-            logger.info("=== LOGIN SUCCESS ===")
-            print("=== LOGIN SUCCESS ===")
-            sys.stdout.flush()
-            
             return {
                 "access_token": access_token,
                 "id_token": id_token
             }
-            
-        except HTTPException:
-            raise
         except Exception as e:
-            logger.error("Unexpected error in token exchange: %s", str(e))
-            logger.error("Exception type: %s", type(e).__name__)
-            print("Unexpected error in token exchange:", str(e))
-            print("Exception type:", type(e).__name__)
+            logger.error("Error exchanging code: %s", str(e))
+            print("Error exchanging code:", str(e))
             sys.stdout.flush()
-            raise HTTPException(status_code=500, detail=f"Token exchange failed: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
     elif request.email and request.password:
         try:
             logger.info("Authenticating user with email: %s", request.email)
@@ -556,5 +508,3 @@ def handler(event, context):
     if path == "/webhook" or "webhook" in path.lower():
         return webhook_handler(event, context)
     return Mangum(app)(event, context)
-
-# Test comment to trigger CI/CD deployment - removed hosted UI dependency
