@@ -14,6 +14,9 @@ void LoginComponent::startLoginFlow()
 {
     DBG("Starting login flow explicitly");
     
+    // Force reload of settings to ensure we have the latest values
+    appProps.getUserSettings()->reload();
+    
     bool loggedIn = appProps.getUserSettings()->getBoolValue("isLoggedIn", false);
     juce::String accessToken = appProps.getUserSettings()->getValue("accessToken", "");
     int credits = appProps.getUserSettings()->getIntValue("credits", 0);

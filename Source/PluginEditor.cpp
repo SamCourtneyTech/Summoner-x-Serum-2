@@ -217,6 +217,7 @@ void SummonerXSerum2AudioProcessorEditor::handleLogout()
     appProps.getUserSettings()->setValue("idToken", "");
     appProps.getUserSettings()->setValue("credits", 0);
     appProps.getUserSettings()->save();
+    appProps.getUserSettings()->saveIfNeeded(); // Ensure settings are flushed
 
     chatBar.setCredits(0);
     
