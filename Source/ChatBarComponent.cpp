@@ -379,6 +379,7 @@ ChatBarComponent::CreditsModalWindow::CreditsModalWindow()
     closeButton.setColour(juce::TextButton::buttonColourId, juce::Colours::red);
     closeButton.setColour(juce::TextButton::textColourOnId, juce::Colours::white);
     closeButton.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
+    closeButton.setLookAndFeel(&closeButtonLookAndFeel);
     closeButton.onClick = [this]() {
         if (onCloseClicked)
             onCloseClicked();
