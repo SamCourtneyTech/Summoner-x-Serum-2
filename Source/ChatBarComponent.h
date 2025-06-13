@@ -3,6 +3,7 @@
 #include "PluginProcessor.h"  
 #include <map>
 #include <string>
+#include <array>
 
 class ChatBarComponent : public juce::Component, public juce::Timer
 {
@@ -34,8 +35,10 @@ private:
     };
     
     std::vector<FloatingBox> floatingBoxes;
+    std::array<int, 4> quadrantCounts = {0, 0, 0, 0}; // Track boxes per quadrant
     void updateFloatingBoxes();
     void createRandomBox();
+    int getQuadrant(float x, float y);
     juce::Random random;
     // Custom Credits Modal
     class CreditsModalWindow : public juce::Component

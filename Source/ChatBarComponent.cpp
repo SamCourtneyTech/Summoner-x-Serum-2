@@ -506,6 +506,9 @@ void ChatBarComponent::updateFloatingBoxes()
         // Remove boxes that have faded out and exceeded their lifetime
         if (box.alpha < 0.01f && box.lifeTime > box.maxLifeTime)
         {
+            // Update quadrant count before removing
+            int quadrant = getQuadrant(box.x, box.y);
+            quadrantCounts[quadrant]--;
             it = floatingBoxes.erase(it);
         }
         else
@@ -519,9 +522,41 @@ void ChatBarComponent::createRandomBox()
 {
     FloatingBox box;
     
-    // Random position
-    box.x = random.nextFloat() * getWidth();
-    box.y = random.nextFloat() * getHeight();
+    // Find the least populated quadrant for balanced distribution
+    int minQuadrant = 0;
+    int minCount = quadrantCounts[0];
+    for (int i = 1; i < 4; ++i)
+    {
+        if (quadrantCounts[i] < minCount)
+        {
+            minCount = quadrantCounts[i];
+            minQuadrant = i;
+        }
+    }
+    
+    // Generate position in the chosen quadrant
+    float halfWidth = getWidth() * 0.5f;
+    float halfHeight = getHeight() * 0.5f;
+    
+    switch (minQuadrant)
+    {
+        case 0: // Top-left
+            box.x = random.nextFloat() * halfWidth;
+            box.y = random.nextFloat() * halfHeight;
+            break;
+        case 1: // Top-right
+            box.x = halfWidth + random.nextFloat() * halfWidth;
+            box.y = random.nextFloat() * halfHeight;
+            break;
+        case 2: // Bottom-left
+            box.x = random.nextFloat() * halfWidth;
+            box.y = halfHeight + random.nextFloat() * halfHeight;
+            break;
+        case 3: // Bottom-right
+            box.x = halfWidth + random.nextFloat() * halfWidth;
+            box.y = halfHeight + random.nextFloat() * halfHeight;
+            break;
+    }
     
     // Random size between 3-12 pixels
     box.size = 3.0f + random.nextFloat() * 9.0f;
@@ -556,5 +591,24 @@ void ChatBarComponent::createRandomBox()
     box.maxLifeTime = 40 + random.nextInt(120); // 40-160 frames
     box.lifeTime = 0;
     
+    // Update quadrant count
+    int quadrant = getQuadrant(box.x, box.y);
+    quadrantCounts[quadrant]++;
+    
     floatingBoxes.push_back(box);
+}
+
+int ChatBarComponent::getQuadrant(float x, float y)
+{
+    float halfWidth = getWidth() * 0.5f;
+    float halfHeight = getHeight() * 0.5f;
+    
+    if (x < halfWidth && y < halfHeight)
+        return 0; // Top-left
+    else if (x >= halfWidth && y < halfHeight)
+        return 1; // Top-right
+    else if (x < halfWidth && y >= halfHeight)
+        return 2; // Bottom-left
+    else
+        return 3; // Bottom-right
 }
