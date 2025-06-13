@@ -82,11 +82,35 @@ SettingsComponent::SettingsComponent(SummonerXSerum2AudioProcessor& processor)
         }
         };
     addAndMakeVisible(logoutButton);
+
+    // Credits label
+    creditsLabel.setText("Credits: 0", juce::dontSendNotification);
+    creditsLabel.setFont(juce::Font("Press Start 2P", 12.0f, juce::Font::plain));
+    creditsLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+    addAndMakeVisible(creditsLabel);
+
+    // Purchase credits button
+    purchaseCreditsButton.setLookAndFeel(&customSettingsButtons);
+    purchaseCreditsButton.setButtonText("Purchase Credits");
+    purchaseCreditsButton.setColour(juce::TextButton::buttonColourId, juce::Colours::darkblue);
+    purchaseCreditsButton.setColour(juce::TextButton::textColourOnId, juce::Colours::white);
+    purchaseCreditsButton.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
+    purchaseCreditsButton.onClick = [this]() {
+        // Placeholder for future implementation
+        juce::AlertWindow::showMessageBoxAsync(
+            juce::AlertWindow::InfoIcon,
+            "Purchase Credits",
+            "Credit purchasing functionality will be implemented soon!");
+    };
+    addAndMakeVisible(purchaseCreditsButton);
 }
 
 SettingsComponent::~SettingsComponent()
 {
     browseButton.setLookAndFeel(nullptr);
+    resetButton.setLookAndFeel(nullptr);
+    logoutButton.setLookAndFeel(nullptr);
+    purchaseCreditsButton.setLookAndFeel(nullptr);
 }
 
 void SettingsComponent::resetSavedPath()
@@ -197,7 +221,15 @@ void SettingsComponent::resized()
     resetButton.setBounds(topButtonArea.getX() + buttonWidth + buttonSpacing, topButtonArea.getY(), buttonWidth, buttonHeight);
 
     // Spacer
-    bounds.removeFromTop(buttonSpacing * 4);
+    bounds.removeFromTop(buttonSpacing * 2);
+
+    // Credits row
+    creditsLabel.setBounds(bounds.getX(), bounds.getY(), buttonWidth * 2, buttonHeight);
+    bounds.removeFromTop(buttonHeight + buttonSpacing);
+
+    // Purchase credits button
+    purchaseCreditsButton.setBounds(bounds.getX(), bounds.getY(), buttonWidth * 2, buttonHeight);
+    bounds.removeFromTop(buttonHeight + buttonSpacing * 2);
 
     // Logout button
     logoutButton.setBounds(bounds.getX(), bounds.getY(), buttonWidth, buttonHeight);
@@ -228,4 +260,22 @@ void SettingsComponent::updateLoginState(bool isLoggedIn)
         logoutButton.setButtonText("Login");
         logoutButton.setColour(juce::TextButton::buttonColourId, juce::Colours::blue);
     }
+}
+
+void SettingsComponent::setCredits(int credits)
+{
+    currentCredits = credits;
+    creditsLabel.setText("Credits: " + juce::String(credits), juce::dontSendNotification);
+    
+    // Set color to red if credits are 0, otherwise white
+    if (credits == 0) {
+        creditsLabel.setColour(juce::Label::textColourId, juce::Colours::red);
+    } else {
+        creditsLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+    }
+}
+
+int SettingsComponent::getCredits() const
+{
+    return currentCredits;
 }

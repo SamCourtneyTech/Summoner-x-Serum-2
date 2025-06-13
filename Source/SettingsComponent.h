@@ -28,7 +28,8 @@ public:
     std::function<void()> onLogin;
     
     void updateLoginState(bool isLoggedIn);
-
+    void setCredits(int credits);
+    int getCredits() const;
 
 private:
     juce::Label pathLabel;
@@ -43,6 +44,9 @@ private:
     void savePath(const juce::String& path);
     juce::Label pluginPathLabel;
     juce::TextButton logoutButton;
+    juce::Label creditsLabel;
+    juce::TextButton purchaseCreditsButton;
+    int currentCredits = 0;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SettingsComponent)
 };
