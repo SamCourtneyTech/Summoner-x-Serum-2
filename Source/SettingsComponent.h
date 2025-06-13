@@ -1,9 +1,10 @@
 #pragma once
 #include <JuceHeader.h>
+#include <array>
 
 class SummonerXSerum2AudioProcessor;
 
-class SettingsComponent : public juce::Component
+class SettingsComponent : public juce::Component, public juce::Timer
 {
 public:
     void updatePathDisplay(const juce::String& newPath)
@@ -30,8 +31,28 @@ public:
     void updateLoginState(bool isLoggedIn);
     void setCredits(int credits);
     int getCredits() const;
+    void timerCallback() override;
 
 private:
+    // Mystical floating boxes effect
+    struct FloatingBox
+    {
+        float x, y;
+        float size;
+        float alpha;
+        float targetAlpha;
+        float fadeSpeed;
+        juce::Colour color;
+        int lifeTime;
+        int maxLifeTime;
+    };
+    
+    std::vector<FloatingBox> floatingBoxes;
+    std::array<int, 4> quadrantCounts = {0, 0, 0, 0}; // Track boxes per quadrant
+    void updateFloatingBoxes();
+    void createRandomBox();
+    int getQuadrant(float x, float y);
+    juce::Random random;
     juce::Label pathLabel;
     juce::Label pathDisplay;
     juce::TextButton browseButton;
