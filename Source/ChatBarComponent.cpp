@@ -90,16 +90,31 @@ ChatBarComponent::ChatBarComponent(SummonerXSerum2AudioProcessor& p) : processor
 
         sendPromptToGenerateParameters(userInput);
         };
+
+    // Initialize mystical floating boxes effect
+    floatingBoxes.reserve(20); // Reserve space for up to 20 boxes
+    startTimer(50); // 50ms timer for smooth animation (20 FPS)
 }
 
 ChatBarComponent::~ChatBarComponent()
 {
+    stopTimer();
     sendButton.setLookAndFeel(nullptr);
 }
 
 void ChatBarComponent::paint(juce::Graphics& g)
 {
     g.fillAll(juce::Colours::black);
+    
+    // Draw mystical floating boxes
+    for (const auto& box : floatingBoxes)
+    {
+        if (box.alpha > 0.0f)
+        {
+            g.setColour(box.color.withAlpha(box.alpha));
+            g.fillRect(box.x, box.y, box.size, box.size);
+        }
+    }
     
     // Draw hover background for credits label
     if (creditsLabelHovered)
@@ -443,4 +458,103 @@ void ChatBarComponent::CreditsModalWindow::resized()
     
     // Purchase button
     purchaseButton.setBounds(modalBounds.getCentreX() - 100, modalBounds.getBottom() - 60, 200, 35);
+}
+
+void ChatBarComponent::timerCallback()
+{
+    updateFloatingBoxes();
+    
+    // Randomly create new boxes
+    if (random.nextFloat() < 0.02f && floatingBoxes.size() < 15) // 2% chance per frame, max 15 boxes
+    {
+        createRandomBox();
+    }
+    
+    repaint();
+}
+
+void ChatBarComponent::updateFloatingBoxes()
+{
+    for (auto it = floatingBoxes.begin(); it != floatingBoxes.end();)
+    {
+        auto& box = *it;
+        
+        // Update lifetime
+        box.lifeTime++;
+        
+        // Update alpha towards target
+        float alphaDiff = box.targetAlpha - box.alpha;
+        box.alpha += alphaDiff * box.fadeSpeed;
+        
+        // Change target alpha based on lifecycle
+        if (box.lifeTime < box.maxLifeTime * 0.3f)
+        {
+            // Fade in phase
+            box.targetAlpha = 0.6f;
+        }
+        else if (box.lifeTime > box.maxLifeTime * 0.7f)
+        {
+            // Fade out phase
+            box.targetAlpha = 0.0f;
+        }
+        else
+        {
+            // Stable phase with gentle pulsing
+            box.targetAlpha = 0.4f + 0.2f * std::sin(box.lifeTime * 0.1f);
+        }
+        
+        // Remove boxes that have faded out and exceeded their lifetime
+        if (box.alpha < 0.01f && box.lifeTime > box.maxLifeTime)
+        {
+            it = floatingBoxes.erase(it);
+        }
+        else
+        {
+            ++it;
+        }
+    }
+}
+
+void ChatBarComponent::createRandomBox()
+{
+    FloatingBox box;
+    
+    // Random position
+    box.x = random.nextFloat() * getWidth();
+    box.y = random.nextFloat() * getHeight();
+    
+    // Random size between 3-12 pixels
+    box.size = 3.0f + random.nextFloat() * 9.0f;
+    
+    // Start invisible
+    box.alpha = 0.0f;
+    box.targetAlpha = 0.0f;
+    
+    // Random fade speed
+    box.fadeSpeed = 0.02f + random.nextFloat() * 0.08f;
+    
+    // Random mystical colors (blues, purples, whites)
+    float colorChoice = random.nextFloat();
+    if (colorChoice < 0.4f)
+    {
+        // Blue tones
+        box.color = juce::Colour::fromRGB(100 + random.nextInt(100), 150 + random.nextInt(100), 255);
+    }
+    else if (colorChoice < 0.7f)
+    {
+        // Purple tones
+        box.color = juce::Colour::fromRGB(150 + random.nextInt(100), 100 + random.nextInt(100), 255);
+    }
+    else
+    {
+        // White/silver tones
+        int brightness = 200 + random.nextInt(55);
+        box.color = juce::Colour::fromRGB(brightness, brightness, brightness);
+    }
+    
+    // Random lifetime (2-8 seconds at 20 FPS)
+    box.maxLifeTime = 40 + random.nextInt(120); // 40-160 frames
+    box.lifeTime = 0;
+    
+    floatingBoxes.push_back(box);
 }

@@ -4,7 +4,7 @@
 #include <map>
 #include <string>
 
-class ChatBarComponent : public juce::Component
+class ChatBarComponent : public juce::Component, public juce::Timer
 {
 public:
     ChatBarComponent(SummonerXSerum2AudioProcessor& p);
@@ -17,8 +17,26 @@ public:
     void mouseDown(const juce::MouseEvent& event) override;
     void mouseEnter(const juce::MouseEvent& event) override;
     void mouseExit(const juce::MouseEvent& event) override;
+    void timerCallback() override;
 
 private:
+    // Mystical floating boxes effect
+    struct FloatingBox
+    {
+        float x, y;
+        float size;
+        float alpha;
+        float targetAlpha;
+        float fadeSpeed;
+        juce::Colour color;
+        int lifeTime;
+        int maxLifeTime;
+    };
+    
+    std::vector<FloatingBox> floatingBoxes;
+    void updateFloatingBoxes();
+    void createRandomBox();
+    juce::Random random;
     // Custom Credits Modal
     class CreditsModalWindow : public juce::Component
     {
