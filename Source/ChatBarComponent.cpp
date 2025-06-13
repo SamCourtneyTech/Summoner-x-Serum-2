@@ -92,7 +92,7 @@ ChatBarComponent::ChatBarComponent(SummonerXSerum2AudioProcessor& p) : processor
         };
 
     // Initialize mystical floating boxes effect
-    floatingBoxes.reserve(20); // Reserve space for up to 20 boxes
+    floatingBoxes.reserve(30); // Reserve space for up to 30 boxes
     startTimer(50); // 50ms timer for smooth animation (20 FPS)
 }
 
@@ -465,7 +465,7 @@ void ChatBarComponent::timerCallback()
     updateFloatingBoxes();
     
     // Randomly create new boxes
-    if (random.nextFloat() < 0.02f && floatingBoxes.size() < 15) // 2% chance per frame, max 15 boxes
+    if (random.nextFloat() < 0.08f && floatingBoxes.size() < 28) // 8% chance per frame, max 28 boxes
     {
         createRandomBox();
     }
