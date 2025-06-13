@@ -387,19 +387,16 @@ ChatBarComponent::CreditsModalWindow::CreditsModalWindow()
     // Title label
     addAndMakeVisible(titleLabel);
     titleLabel.setText("Credits Information", juce::dontSendNotification);
-    titleLabel.setFont(juce::Font("Press Start 2P", 16.0f, juce::Font::plain));
-    titleLabel.setColour(juce::Label::textColourId, juce::Colours::black);
+    titleLabel.setFont(juce::Font("Press Start 2P", 20.0f, juce::Font::plain));
+    titleLabel.setColour(juce::Label::textColourId, juce::Colours::white);
     titleLabel.setJustificationType(juce::Justification::centred);
     
     // Info label
     addAndMakeVisible(infoLabel);
-    infoLabel.setText("Credits are used to generate custom Serum presets with AI.\n\n"
-                     "Each prompt you submit consumes 1 credit and creates a unique\n"
-                     "synthesizer preset based on your description.\n\n"
-                     "Need more credits? Click the button below to purchase additional credits.",
+    infoLabel.setText("Each prompt you submit consumes 1 credit. Need more credits? Click the button below to purchase more.",
                      juce::dontSendNotification);
-    infoLabel.setFont(juce::Font("Press Start 2P", 12.0f, juce::Font::plain));
-    infoLabel.setColour(juce::Label::textColourId, juce::Colours::black);
+    infoLabel.setFont(juce::Font("Press Start 2P", 16.0f, juce::Font::plain));
+    infoLabel.setColour(juce::Label::textColourId, juce::Colours::white);
     infoLabel.setJustificationType(juce::Justification::centred);
     
     // Purchase button
@@ -422,7 +419,7 @@ void ChatBarComponent::CreditsModalWindow::paint(juce::Graphics& g)
     
     // Modal window background - made larger
     auto modalBounds = getLocalBounds().reduced(60).withSizeKeepingCentre(600, 450);
-    g.setColour(juce::Colours::lightgrey);
+    g.setColour(juce::Colours::black);
     g.fillRect(modalBounds);
     
     // Border
