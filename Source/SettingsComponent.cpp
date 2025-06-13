@@ -92,9 +92,9 @@ SettingsComponent::SettingsComponent(SummonerXSerum2AudioProcessor& processor)
     // Purchase credits button
     purchaseCreditsButton.setLookAndFeel(&customSettingsButtons);
     purchaseCreditsButton.setButtonText("Purchase Credits");
-    purchaseCreditsButton.setColour(juce::TextButton::buttonColourId, juce::Colours::darkblue);
-    purchaseCreditsButton.setColour(juce::TextButton::textColourOnId, juce::Colours::white);
-    purchaseCreditsButton.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
+    purchaseCreditsButton.setColour(juce::TextButton::buttonColourId, juce::Colours::white);
+    purchaseCreditsButton.setColour(juce::TextButton::textColourOnId, juce::Colours::black);
+    purchaseCreditsButton.setColour(juce::TextButton::textColourOffId, juce::Colours::black);
     purchaseCreditsButton.onClick = [this]() {
         // Placeholder for future implementation
         juce::AlertWindow::showMessageBoxAsync(
@@ -220,16 +220,16 @@ void SettingsComponent::resized()
     browseButton.setBounds(topButtonArea.getX(), topButtonArea.getY(), buttonWidth, buttonHeight);
     resetButton.setBounds(topButtonArea.getX() + buttonWidth + buttonSpacing, topButtonArea.getY(), buttonWidth, buttonHeight);
 
-    // Spacer
-    bounds.removeFromTop(buttonSpacing * 2);
+    // Spacer between path section and credits section
+    bounds.removeFromTop(buttonSpacing * 5);
 
-    // Credits row
+    // Credits section
     creditsLabel.setBounds(bounds.getX(), bounds.getY(), buttonWidth * 2, buttonHeight);
     bounds.removeFromTop(buttonHeight + buttonSpacing);
 
-    // Purchase credits button
+    // Purchase credits button (original size)
     purchaseCreditsButton.setBounds(bounds.getX(), bounds.getY(), buttonWidth * 2, buttonHeight);
-    bounds.removeFromTop(buttonHeight + buttonSpacing * 2);
+    bounds.removeFromTop(buttonHeight + buttonSpacing * 5);
 
     // Logout button
     logoutButton.setBounds(bounds.getX(), bounds.getY(), buttonWidth, buttonHeight);
