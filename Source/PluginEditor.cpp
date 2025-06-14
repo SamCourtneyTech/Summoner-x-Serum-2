@@ -266,12 +266,9 @@ void SummonerXSerum2AudioProcessorEditor::refreshAccessToken()
         << ", stored credits: " << currentCredits << ", token length: " << accessToken.length());
     
     if (!isLoggedIn || accessToken.isEmpty()) {
-        DBG("Not logged in or no access token available - redirecting to login");
-        
-        // Clear login state and redirect to login
-        juce::MessageManager::callAsync([this]() {
-            handleLogout();
-        });
+        DBG("Not logged in or no access token available - skipping credit refresh");
+        // Don't force logout here - user might still be in the process of logging in
+        // or there might be a temporary state issue
         return;
     }
     
@@ -356,12 +353,8 @@ void SummonerXSerum2AudioProcessorEditor::fetchAndUpdateCredits(const juce::Stri
         }
         else
         {
-            DBG("Credits fetch failed: Invalid response format");
-            // If credits fetch fails and can't parse response, token might be invalid
-            juce::MessageManager::callAsync([this]() {
-                DBG("Credits fetch failed - token may be invalid, logging out");
-                handleLogout();
-            });
+            DBG("Credits fetch failed: Invalid response format - likely network issue, not logging out");
+            // Don't log out for parsing errors - could be temporary network/server issues
         }
     }
     else

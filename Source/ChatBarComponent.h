@@ -16,6 +16,7 @@ public:
     void setCredits(int credits);
     void showCreditsModal();
     void showOutOfCreditsModal();
+    void refreshCreditsFromModal();
     void mouseDown(const juce::MouseEvent& event) override;
     void mouseEnter(const juce::MouseEvent& event) override;
     void mouseExit(const juce::MouseEvent& event) override;

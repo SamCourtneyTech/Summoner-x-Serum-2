@@ -376,7 +376,7 @@ int ChatBarComponent::fetchUserCredits()
     if (accessToken.isEmpty())
     {
         DBG("No access token available to fetch credits");
-        return 0;
+        return -1; // Return -1 to indicate error, not legitimate 0 credits
     }
 
     juce::URL url("https://ydr97n8vxe.execute-api.us-east-2.amazonaws.com/prod/get-credits");
@@ -405,10 +405,10 @@ int ChatBarComponent::fetchUserCredits()
                 
                 if (detail == "Invalid token")
                 {
-                    DBG("Token is invalid during credit fetch - returning 0 credits");
+                    DBG("Token is invalid during credit fetch - returning error");
                     // Don't handle logout here, let the parent component handle it
                 }
-                return 0;
+                return -1; // Return -1 to indicate error
             }
             else if (obj->hasProperty("credits"))
             {
@@ -420,17 +420,17 @@ int ChatBarComponent::fetchUserCredits()
             else
             {
                 DBG("No credits field found in response");
-                return 0;
+                return -1; // Return -1 to indicate error
             }
         }
         else
         {
             DBG("Invalid JSON response format");
-            return 0;
+            return -1; // Return -1 to indicate error
         }
     }
     DBG("Failed to fetch credits: No response from server");
-    return 0;
+    return -1; // Return -1 to indicate error
 }
 
 void ChatBarComponent::mouseDown(const juce::MouseEvent& event)
@@ -479,6 +479,39 @@ void ChatBarComponent::showCreditsModal()
     addAndMakeVisible(creditsModal.get());
     creditsModal->setBounds(getLocalBounds());
     creditsModal->toFront(true);
+    
+    // Automatically refresh credits when modal is opened
+    DBG("Credits modal opened - refreshing credits");
+    refreshCreditsFromModal();
+}
+
+void ChatBarComponent::refreshCreditsFromModal()
+{
+    // Use the existing fetchUserCredits method but with improved error handling
+    std::thread([this]() {
+        DBG("Modal credit refresh - starting background fetch");
+        
+        int newCredits = fetchUserCredits();
+        
+        // Update the UI on the main thread
+        juce::MessageManager::callAsync([this, newCredits]() {
+            if (newCredits >= 0) // Only update if we got a valid response (0 or positive credits)
+            {
+                DBG("Modal credit refresh - updating to: " << newCredits);
+                setCredits(newCredits);
+                
+                // Update stored credits too
+                appProps.getUserSettings()->setValue("credits", newCredits);
+                appProps.getUserSettings()->save();
+                
+                DBG("Credits successfully refreshed from modal");
+            }
+            else
+            {
+                DBG("Modal credit refresh - failed to get valid credits, keeping current value");
+            }
+        });
+    }).detach();
 }
 
 // CreditsModalWindow Implementation
