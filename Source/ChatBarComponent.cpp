@@ -91,6 +91,11 @@ ChatBarComponent::ChatBarComponent(SummonerXSerum2AudioProcessor& p) : processor
         sendPromptToGenerateParameters(userInput);
         };
 
+    // Enable Enter key to trigger summon button
+    chatInput.onReturnKey = [this]() {
+        sendButton.onClick();
+    };
+
     // Initialize mystical floating boxes effect
     floatingBoxes.reserve(40); // Reserve space for up to 40 boxes
     startTimer(50); // 50ms timer for smooth animation (20 FPS)
