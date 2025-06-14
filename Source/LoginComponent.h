@@ -283,9 +283,36 @@ private:
             juce::String response = stream->readEntireStreamAsString();
             DBG("Received response from /get-credits endpoint: " + response);
             juce::var result = juce::JSON::parse(response);
-            int credits = result["credits"].toString().getIntValue();
-            DBG("Parsed credits: " + juce::String(credits));
-            return credits;
+            
+            if (result.isObject())
+            {
+                auto* obj = result.getDynamicObject();
+                
+                // Check if this is an error response with "detail" field
+                if (obj->hasProperty("detail"))
+                {
+                    juce::String detail = obj->getProperty("detail").toString();
+                    DBG("Credits fetch error in Login: " + detail);
+                    return 0;
+                }
+                else if (obj->hasProperty("credits"))
+                {
+                    // Successful response with credits
+                    int credits = obj->getProperty("credits").toString().getIntValue();
+                    DBG("Parsed credits: " + juce::String(credits));
+                    return credits;
+                }
+                else
+                {
+                    DBG("No credits field found in response");
+                    return 0;
+                }
+            }
+            else
+            {
+                DBG("Invalid JSON response format");
+                return 0;
+            }
         }
         DBG("Failed to fetch credits: No response from server");
         return 0;

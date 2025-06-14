@@ -75,8 +75,8 @@ SummonerXSerum2AudioProcessorEditor::SummonerXSerum2AudioProcessorEditor(Summone
         currentUIState = UIState::LoggedIn;
         chatBar.setCredits(credits);
         
-        // Start hourly token refresh timer after successful login
-        startTimer(3600000); // 1 hour = 3600000 ms
+        // Start token refresh timer after successful login
+        startTimer(900000); // 15 minutes = 900000 ms (frequent credit refresh)
         
         // Mark as not first time user
         appProps.getUserSettings()->setValue("hasLoggedInBefore", true);
@@ -134,8 +134,8 @@ SummonerXSerum2AudioProcessorEditor::SummonerXSerum2AudioProcessorEditor(Summone
         // Validate token and fetch current credits on plugin instantiation if logged in
         refreshAccessToken();
         
-        // Start hourly token refresh timer (3600000 ms = 1 hour)
-        startTimer(3600000);
+        // Start token refresh timer (900000 ms = 15 minutes)
+        startTimer(900000); // 15 minutes = 900000 ms (frequent credit refresh)
     } else if (isFirstTimeUser()) {
         currentUIState = UIState::FirstTime;
     } else {
@@ -249,7 +249,7 @@ void SummonerXSerum2AudioProcessorEditor::handleLogout()
 
 void SummonerXSerum2AudioProcessorEditor::timerCallback()
 {
-    // Called every hour to validate token and update credits
+    // Called every 15 minutes to validate token and update credits
     DBG("Timer callback triggered - validating token and updating credits");
     refreshAccessToken();
 }
@@ -260,6 +260,10 @@ void SummonerXSerum2AudioProcessorEditor::refreshAccessToken()
     // Check if we're logged in and have an access token
     bool isLoggedIn = appProps.getUserSettings()->getBoolValue("isLoggedIn", false);
     juce::String accessToken = appProps.getUserSettings()->getValue("accessToken", "");
+    int currentCredits = appProps.getUserSettings()->getIntValue("credits", 0);
+    
+    DBG("refreshAccessToken() called - isLoggedIn: " << (isLoggedIn ? "true" : "false") 
+        << ", stored credits: " << currentCredits << ", token length: " << accessToken.length());
     
     if (!isLoggedIn || accessToken.isEmpty()) {
         DBG("Not logged in or no access token available - redirecting to login");
@@ -271,11 +275,13 @@ void SummonerXSerum2AudioProcessorEditor::refreshAccessToken()
         return;
     }
     
-    DBG("Validating current access token and fetching latest credits");
+    DBG("Valid login state detected, starting background credit refresh");
     
     // Fetch current credits to verify token is still valid
     std::thread([this, accessToken]() {
+        DBG("Background thread started for credit refresh");
         fetchAndUpdateCredits(accessToken);
+        DBG("Background thread completed for credit refresh");
     }).detach();
 }
 
@@ -285,6 +291,8 @@ void SummonerXSerum2AudioProcessorEditor::fetchAndUpdateCredits(const juce::Stri
         DBG("No access token available for credits fetch");
         return;
     }
+    
+    DBG("Making request to get-credits endpoint");
     
     juce::URL creditsUrl("https://ydr97n8vxe.execute-api.us-east-2.amazonaws.com/prod/get-credits");
     
@@ -303,23 +311,53 @@ void SummonerXSerum2AudioProcessorEditor::fetchAndUpdateCredits(const juce::Stri
         
         if (result.isObject())
         {
-            int newCredits = result["credits"].toString().getIntValue();
+            auto* obj = result.getDynamicObject();
             
-            // Update stored credits and display
-            juce::MessageManager::callAsync([this, newCredits]() {
-                appProps.getUserSettings()->setValue("credits", newCredits);
-                appProps.getUserSettings()->save();
+            // Check if this is an error response with "detail" field
+            if (obj->hasProperty("detail"))
+            {
+                juce::String detail = obj->getProperty("detail").toString();
+                DBG("Credits fetch error: " + detail);
                 
-                // Update credits display
-                chatBar.setCredits(newCredits);
+                if (detail == "Invalid token")
+                {
+                    DBG("Token is invalid - logging out user");
+                    juce::MessageManager::callAsync([this]() {
+                        handleLogout();
+                    });
+                }
+                else
+                {
+                    DBG("Other API error during credits fetch: " + detail);
+                    // Don't log out for other errors, just skip this update
+                }
+            }
+            else if (obj->hasProperty("credits"))
+            {
+                // Successful response with credits
+                int newCredits = obj->getProperty("credits").toString().getIntValue();
                 
-                DBG("Credits updated successfully: " + juce::String(newCredits));
-            });
+                // Update stored credits and display
+                juce::MessageManager::callAsync([this, newCredits]() {
+                    appProps.getUserSettings()->setValue("credits", newCredits);
+                    appProps.getUserSettings()->save();
+                    
+                    // Update credits display
+                    chatBar.setCredits(newCredits);
+                    
+                    DBG("Credits updated successfully: " + juce::String(newCredits));
+                });
+            }
+            else
+            {
+                DBG("Credits fetch failed: No credits field in response");
+                // Unknown response format - don't log out, just skip
+            }
         }
         else
         {
             DBG("Credits fetch failed: Invalid response format");
-            // If credits fetch fails, token might be invalid
+            // If credits fetch fails and can't parse response, token might be invalid
             juce::MessageManager::callAsync([this]() {
                 DBG("Credits fetch failed - token may be invalid, logging out");
                 handleLogout();
