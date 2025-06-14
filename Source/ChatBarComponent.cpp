@@ -635,14 +635,14 @@ ChatBarComponent::OutOfCreditsModalWindow::OutOfCreditsModalWindow()
     
     // No credits warning label
     addAndMakeVisible(noCreditsLabel);
-    noCreditsLabel.setText("You have 0 credits remaining!", juce::dontSendNotification);
+    noCreditsLabel.setText("Purchase more to continue! :)", juce::dontSendNotification);
     noCreditsLabel.setFont(juce::Font("Press Start 2P", 16.0f, juce::Font::plain));
     noCreditsLabel.setColour(juce::Label::textColourId, juce::Colours::orange);
     noCreditsLabel.setJustificationType(juce::Justification::centred);
     
     // Info label
     addAndMakeVisible(infoLabel);
-    infoLabel.setText("You need credits to generate new sounds. Purchase more credits to continue creating amazing presets!",
+    infoLabel.setText("Each sound summoned consumes 1 credit.",
                      juce::dontSendNotification);
     infoLabel.setFont(juce::Font("Press Start 2P", 14.0f, juce::Font::plain));
     infoLabel.setColour(juce::Label::textColourId, juce::Colours::white);
