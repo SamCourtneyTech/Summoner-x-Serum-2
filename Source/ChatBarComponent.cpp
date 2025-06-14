@@ -538,7 +538,7 @@ ChatBarComponent::CreditsModalWindow::CreditsModalWindow()
     
     // Info label
     addAndMakeVisible(infoLabel);
-    infoLabel.setText("Each prompt you submit consumes 1 credit. Need more credits? Click the button below to purchase more.",
+    infoLabel.setText("Each prompt you submit consumes 1 credit.",
                      juce::dontSendNotification);
     infoLabel.setFont(juce::Font("Press Start 2P", 16.0f, juce::Font::plain));
     infoLabel.setColour(juce::Label::textColourId, juce::Colours::white);

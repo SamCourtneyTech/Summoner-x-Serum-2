@@ -74,6 +74,7 @@ SummonerXSerum2AudioProcessorEditor::SummonerXSerum2AudioProcessorEditor(Summone
         
         currentUIState = UIState::LoggedIn;
         chatBar.setCredits(credits);
+        settings.setCredits(credits);
         
         // Start token refresh timer after successful login
         startTimer(900000); // 15 minutes = 900000 ms (frequent credit refresh)
@@ -130,6 +131,7 @@ SummonerXSerum2AudioProcessorEditor::SummonerXSerum2AudioProcessorEditor(Summone
     if (loggedIn && !accessToken.isEmpty()) {
         currentUIState = UIState::LoggedIn;
         chatBar.setCredits(credits);
+        settings.setCredits(credits);
         
         // Validate token and fetch current credits on plugin instantiation if logged in
         refreshAccessToken();
@@ -228,6 +230,7 @@ void SummonerXSerum2AudioProcessorEditor::handleLogout()
     appProps.getUserSettings()->saveIfNeeded(); // Ensure settings are flushed
 
     chatBar.setCredits(0);
+    settings.setCredits(0);
     
     // Set to LoggedOut state to show overlay on ChatGPT tab only
     currentUIState = UIState::LoggedOut;
@@ -341,6 +344,7 @@ void SummonerXSerum2AudioProcessorEditor::fetchAndUpdateCredits(const juce::Stri
                     
                     // Update credits display
                     chatBar.setCredits(newCredits);
+                    settings.setCredits(newCredits);
                     
                     DBG("Credits updated successfully: " + juce::String(newCredits));
                 });
