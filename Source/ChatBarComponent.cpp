@@ -165,6 +165,21 @@ void ChatBarComponent::sendPromptToGenerateParameters(const juce::String& userPr
             << ", accessToken length: " << accessToken.length() 
             << ", credits: " << credits);
             
+        // Check if user has credits before making request
+        if (credits <= 0)
+        {
+            DBG("No credits available - showing out of credits modal");
+            juce::MessageManager::callAsync([this]() {
+                showOutOfCreditsModal();
+                if (auto* editor = dynamic_cast<SummonerXSerum2AudioProcessorEditor*>(getParentComponent()->getParentComponent()))
+                {
+                    editor->showLoadingScreen(false);
+                }
+                requestInProgress = false;
+            });
+            return;
+        }
+            
         if (accessToken.isEmpty())
         {
             DBG("Access token is empty - login state: " << (isLoggedIn ? "logged in" : "not logged in"));
@@ -228,8 +243,56 @@ void ChatBarComponent::sendPromptToGenerateParameters(const juce::String& userPr
 
             if (result.isObject())
             {
-                std::map<std::string, std::string> parameterMap;
                 auto* obj = result.getDynamicObject();
+                
+                // Check if this is an error response with "detail" field
+                if (obj->hasProperty("detail"))
+                {
+                    juce::String detail = obj->getProperty("detail").toString();
+                    
+                    if (detail == "Invalid token")
+                    {
+                        juce::MessageManager::callAsync([this]() {
+                            DBG("Invalid token response - attempting to refresh token");
+                            
+                            // Try to refresh the token
+                            if (auto* editor = dynamic_cast<SummonerXSerum2AudioProcessorEditor*>(getParentComponent()->getParentComponent()))
+                            {
+                                editor->refreshAccessToken();
+                                editor->showLoadingScreen(false);
+                            }
+                            
+                            juce::AlertWindow::showMessageBoxAsync(
+                                juce::AlertWindow::WarningIcon,
+                                "Authentication Error",
+                                "Your session has expired. Please try again or log in again if the issue persists.");
+                            
+                            requestInProgress = false;
+                        });
+                        return;
+                    }
+                    else
+                    {
+                        // Handle other error details
+                        juce::MessageManager::callAsync([this, detail]() {
+                            DBG("API error response: " + detail);
+                            juce::AlertWindow::showMessageBoxAsync(
+                                juce::AlertWindow::WarningIcon,
+                                "Error",
+                                "Server error: " + detail);
+                            
+                            if (auto* editor = dynamic_cast<SummonerXSerum2AudioProcessorEditor*>(getParentComponent()->getParentComponent()))
+                            {
+                                editor->showLoadingScreen(false);
+                            }
+                            requestInProgress = false;
+                        });
+                        return;
+                    }
+                }
+                
+                // If we get here, it's a successful response with parameters
+                std::map<std::string, std::string> parameterMap;
                 for (const auto& property : obj->getProperties())
                 {
                     juce::String key = property.name.toString();
@@ -458,6 +521,117 @@ void ChatBarComponent::CreditsModalWindow::resized()
     
     // Purchase button
     purchaseButton.setBounds(modalBounds.getCentreX() - 100, modalBounds.getBottom() - 60, 200, 35);
+}
+
+void ChatBarComponent::showOutOfCreditsModal()
+{
+    if (outOfCreditsModal == nullptr)
+    {
+        outOfCreditsModal = std::make_unique<OutOfCreditsModalWindow>();
+        outOfCreditsModal->onCloseClicked = [this]() {
+            outOfCreditsModal->setVisible(false);
+            removeChildComponent(outOfCreditsModal.get());
+        };
+        outOfCreditsModal->onPurchaseClicked = [this]() {
+            juce::AlertWindow::showMessageBoxAsync(
+                juce::AlertWindow::InfoIcon,
+                "Purchase Credits",
+                "Credit purchasing functionality will be implemented soon!");
+        };
+    }
+    
+    addAndMakeVisible(outOfCreditsModal.get());
+    outOfCreditsModal->setBounds(getLocalBounds());
+    outOfCreditsModal->toFront(true);
+}
+
+// OutOfCreditsModalWindow Implementation
+ChatBarComponent::OutOfCreditsModalWindow::OutOfCreditsModalWindow()
+{
+    // Close button (red X)
+    addAndMakeVisible(closeButton);
+    closeButton.setButtonText("X");
+    closeButton.setColour(juce::TextButton::buttonColourId, juce::Colours::red);
+    closeButton.setColour(juce::TextButton::textColourOnId, juce::Colours::white);
+    closeButton.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
+    closeButton.setLookAndFeel(&closeButtonLookAndFeel);
+    closeButton.onClick = [this]() {
+        if (onCloseClicked)
+            onCloseClicked();
+    };
+    
+    // Title label
+    addAndMakeVisible(titleLabel);
+    titleLabel.setText("Out of Credits", juce::dontSendNotification);
+    titleLabel.setFont(juce::Font("Press Start 2P", 20.0f, juce::Font::plain));
+    titleLabel.setColour(juce::Label::textColourId, juce::Colours::red);
+    titleLabel.setJustificationType(juce::Justification::centred);
+    
+    // No credits warning label
+    addAndMakeVisible(noCreditsLabel);
+    noCreditsLabel.setText("You have 0 credits remaining!", juce::dontSendNotification);
+    noCreditsLabel.setFont(juce::Font("Press Start 2P", 16.0f, juce::Font::plain));
+    noCreditsLabel.setColour(juce::Label::textColourId, juce::Colours::orange);
+    noCreditsLabel.setJustificationType(juce::Justification::centred);
+    
+    // Info label
+    addAndMakeVisible(infoLabel);
+    infoLabel.setText("You need credits to generate new sounds. Purchase more credits to continue creating amazing presets!",
+                     juce::dontSendNotification);
+    infoLabel.setFont(juce::Font("Press Start 2P", 14.0f, juce::Font::plain));
+    infoLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+    infoLabel.setJustificationType(juce::Justification::centred);
+    
+    // Purchase button
+    addAndMakeVisible(purchaseButton);
+    purchaseButton.setButtonText("Get More Credits");
+    purchaseButton.setColour(juce::TextButton::buttonColourId, juce::Colours::green);
+    purchaseButton.setColour(juce::TextButton::textColourOnId, juce::Colours::white);
+    purchaseButton.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
+    purchaseButton.setLookAndFeel(&purchaseButtonLookAndFeel);
+    purchaseButton.onClick = [this]() {
+        if (onPurchaseClicked)
+            onPurchaseClicked();
+    };
+}
+
+void ChatBarComponent::OutOfCreditsModalWindow::paint(juce::Graphics& g)
+{
+    // Semi-transparent overlay
+    g.fillAll(juce::Colours::black.withAlpha(0.8f));
+    
+    // Modal window background
+    auto modalBounds = getLocalBounds().reduced(60).withSizeKeepingCentre(600, 500);
+    g.setColour(juce::Colours::darkred.withAlpha(0.3f));
+    g.fillRect(modalBounds);
+    
+    // Red border to emphasize the error
+    g.setColour(juce::Colours::red);
+    g.drawRect(modalBounds, 3);
+    
+    // Inner dark background
+    g.setColour(juce::Colours::black.withAlpha(0.9f));
+    g.fillRect(modalBounds.reduced(3));
+}
+
+void ChatBarComponent::OutOfCreditsModalWindow::resized()
+{
+    auto modalBounds = getLocalBounds().reduced(60).withSizeKeepingCentre(600, 500);
+    
+    // Close button in top-right
+    closeButton.setBounds(modalBounds.getRight() - 35, modalBounds.getY() + 15, 25, 25);
+    
+    // Title
+    titleLabel.setBounds(modalBounds.getX() + 30, modalBounds.getY() + 40, modalBounds.getWidth() - 60, 40);
+    
+    // No credits warning
+    noCreditsLabel.setBounds(modalBounds.getX() + 30, modalBounds.getY() + 100, modalBounds.getWidth() - 60, 40);
+    
+    // Info text
+    infoLabel.setBounds(modalBounds.getX() + 30, modalBounds.getY() + 160, modalBounds.getWidth() - 60, 240);
+    
+    // Purchase button
+    purchaseButton.setBounds(modalBounds.getCentreX() - 100, modalBounds.getBottom() - 70, 200, 40);
 }
 
 void ChatBarComponent::timerCallback()
