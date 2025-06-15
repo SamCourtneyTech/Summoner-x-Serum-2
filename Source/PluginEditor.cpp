@@ -407,6 +407,7 @@ void SummonerXSerum2AudioProcessorEditor::setupWelcomeScreen()
     welcomeLoginButton.setColour(juce::TextButton::buttonColourId, juce::Colours::darkblue);
     welcomeLoginButton.setColour(juce::TextButton::textColourOnId, juce::Colours::white);
     welcomeLoginButton.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
+    welcomeLoginButton.setLookAndFeel(&customLoginButtonLookAndFeel);
     welcomeLoginButton.onClick = [this]() { startLoginProcess(); };
     addChildComponent(welcomeLoginButton);
 }
@@ -432,6 +433,7 @@ void SummonerXSerum2AudioProcessorEditor::setupLoggedOutScreen()
     loggedOutLoginButton.setColour(juce::TextButton::buttonColourId, juce::Colours::darkblue);
     loggedOutLoginButton.setColour(juce::TextButton::textColourOnId, juce::Colours::white);
     loggedOutLoginButton.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
+    loggedOutLoginButton.setLookAndFeel(&customLoginButtonLookAndFeel);
     loggedOutLoginButton.onClick = [this]() { startLoginProcess(); };
     // Note: These are now added to chatLoginOverlay in setupChatLoginOverlay()
 }

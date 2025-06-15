@@ -66,7 +66,36 @@ private:
             g.fillAll(juce::Colours::black);
         }
     };
+    
+    // Custom LookAndFeel for login buttons
+    class LoginButtonLookAndFeel : public juce::LookAndFeel_V4
+    {
+    public:
+        void drawButtonText(juce::Graphics& g, juce::TextButton& button,
+            bool /*isMouseOverButton*/, bool /*isButtonDown*/) override
+        {
+            auto font = juce::Font("Press Start 2P", 12.0f, juce::Font::plain);
+            g.setFont(font);
+            g.setColour(button.findColour(juce::TextButton::textColourOffId));
+            g.drawFittedText(button.getButtonText(), button.getLocalBounds(),
+                juce::Justification::centred, 1);
+        }
+        
+        void drawButtonBackground(juce::Graphics& g, juce::Button& button,
+            const juce::Colour& backgroundColour,
+            bool isMouseOverButton, bool isButtonDown) override
+        {
+            auto bounds = button.getLocalBounds().toFloat();
+            juce::Colour fillColour = isButtonDown ? juce::Colours::navy
+                : isMouseOverButton ? juce::Colours::blue
+                : backgroundColour;
+            g.setColour(fillColour);
+            g.fillRect(bounds);
+        }
+    };
+    
     ChatLoginOverlay chatLoginOverlay;
+    LoginButtonLookAndFeel customLoginButtonLookAndFeel;
     UIState currentUIState = UIState::FirstTime;
     UIState previousUIState = UIState::FirstTime;
     bool loginInitiatedFromSettings = false;

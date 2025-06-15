@@ -18,7 +18,7 @@ public:
 
         addAndMakeVisible(cancelButton);
         cancelButton.setButtonText("Cancel");
-        cancelButton.setColour(juce::TextButton::buttonColourId, juce::Colours::darkgrey);
+        cancelButton.setColour(juce::TextButton::buttonColourId, juce::Colours::red);
         cancelButton.setColour(juce::TextButton::textColourOnId, juce::Colours::white);
         cancelButton.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
         cancelButton.setLookAndFeel(&customCancelButtonLookAndFeel);
@@ -209,8 +209,8 @@ private:
             bool isMouseOverButton, bool isButtonDown) override
         {
             auto bounds = button.getLocalBounds().toFloat();
-            juce::Colour fillColour = isButtonDown ? juce::Colours::grey
-                : isMouseOverButton ? juce::Colours::lightgrey
+            juce::Colour fillColour = isButtonDown ? juce::Colours::darkred
+                : isMouseOverButton ? juce::Colours::indianred
                 : backgroundColour;
             g.setColour(fillColour);
             g.fillRect(bounds);
