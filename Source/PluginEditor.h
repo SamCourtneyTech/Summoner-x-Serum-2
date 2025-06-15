@@ -68,6 +68,7 @@ private:
     };
     ChatLoginOverlay chatLoginOverlay;
     UIState currentUIState = UIState::FirstTime;
+    UIState previousUIState = UIState::FirstTime;
     bool loginInitiatedFromSettings = false;
     
     // Welcome/Login Screen Components
@@ -80,6 +81,7 @@ private:
 
     void loadPluginFromSettings(const juce::String& path);
     void handleLogout();
+    void handleLoginCancel();
     void fetchAndUpdateCredits(const juce::String& accessToken);
     void updateUIState();
     void setupWelcomeScreen();

@@ -101,6 +101,10 @@ SummonerXSerum2AudioProcessorEditor::SummonerXSerum2AudioProcessorEditor(Summone
         resized(); // Ensure layout updates
         };
 
+    login.onCancel = [this]() {
+        handleLoginCancel();
+        };
+
     settings.onLogout = [this]() {
         handleLogout();
         };
@@ -248,6 +252,15 @@ void SummonerXSerum2AudioProcessorEditor::handleLogout()
     DBG("User logged out - showing ChatGPT tab with overlay, other tabs remain accessible");
     repaint();
     resized();
+}
+
+void SummonerXSerum2AudioProcessorEditor::handleLoginCancel()
+{
+    // Return to the previous UI state
+    currentUIState = previousUIState;
+    updateUIState();
+    
+    DBG("Login cancelled - returned to previous state: " + juce::String((int)currentUIState));
 }
 
 void SummonerXSerum2AudioProcessorEditor::timerCallback()
@@ -425,6 +438,7 @@ void SummonerXSerum2AudioProcessorEditor::setupLoggedOutScreen()
 
 void SummonerXSerum2AudioProcessorEditor::startLoginProcess()
 {
+    previousUIState = currentUIState;
     currentUIState = UIState::LoggingIn;
     updateUIState();
     

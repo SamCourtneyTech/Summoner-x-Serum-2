@@ -5,6 +5,7 @@ class LoginComponent : public juce::Component, public juce::Thread
 {
 public:
     std::function<void(juce::String, int)> onLoginSuccess;
+    std::function<void()> onCancel;
     void startLoginFlow();
 
     LoginComponent() : juce::Thread("LoginComponent Server Thread")
@@ -14,6 +15,16 @@ public:
         loginLabel.setFont(juce::Font("Press Start 2P", 16.0f, juce::Font::plain));
         loginLabel.setJustificationType(juce::Justification::centred);
         loginLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+
+        addAndMakeVisible(cancelButton);
+        cancelButton.setButtonText("Cancel");
+        cancelButton.setColour(juce::TextButton::buttonColourId, juce::Colours::darkgrey);
+        cancelButton.setColour(juce::TextButton::textColourOnId, juce::Colours::white);
+        cancelButton.onClick = [this]() {
+            if (onCancel) {
+                onCancel();
+            }
+        };
 
         juce::PropertiesFile::Options options;
         options.applicationName = "SummonerXSerum2";
@@ -39,7 +50,16 @@ public:
     void resized() override
     {
         auto bounds = getLocalBounds();
-        loginLabel.setBounds(bounds);
+        auto buttonHeight = 40;
+        auto buttonWidth = 100;
+        
+        // Position the login label in the center
+        loginLabel.setBounds(bounds.withHeight(bounds.getHeight() - buttonHeight - 20));
+        
+        // Position the cancel button at the bottom center
+        cancelButton.setBounds(bounds.getWidth() / 2 - buttonWidth / 2, 
+                              bounds.getHeight() - buttonHeight - 10, 
+                              buttonWidth, buttonHeight);
     }
 
     void run() override
@@ -161,6 +181,7 @@ public:
 
 private:
     juce::Label loginLabel;
+    juce::TextButton cancelButton;
     juce::URL cognitoUrl;
     std::unique_ptr<juce::StreamingSocket> serverSocket;
     juce::ApplicationProperties appProps;
