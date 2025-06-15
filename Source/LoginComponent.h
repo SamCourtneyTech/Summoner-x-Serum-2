@@ -20,6 +20,8 @@ public:
         cancelButton.setButtonText("Cancel");
         cancelButton.setColour(juce::TextButton::buttonColourId, juce::Colours::darkgrey);
         cancelButton.setColour(juce::TextButton::textColourOnId, juce::Colours::white);
+        cancelButton.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
+        cancelButton.setLookAndFeel(&customCancelButtonLookAndFeel);
         cancelButton.onClick = [this]() {
             if (onCancel) {
                 onCancel();
@@ -51,14 +53,23 @@ public:
     {
         auto bounds = getLocalBounds();
         auto buttonHeight = 40;
-        auto buttonWidth = 100;
+        auto buttonWidth = 120;
+        auto spacing = 20;
         
-        // Position the login label in the center
-        loginLabel.setBounds(bounds.withHeight(bounds.getHeight() - buttonHeight - 20));
+        // Calculate the center position
+        auto centerX = bounds.getWidth() / 2;
+        auto centerY = bounds.getHeight() / 2;
         
-        // Position the cancel button at the bottom center
-        cancelButton.setBounds(bounds.getWidth() / 2 - buttonWidth / 2, 
-                              bounds.getHeight() - buttonHeight - 10, 
+        // Position the login label above center
+        auto labelHeight = 60;
+        loginLabel.setBounds(centerX - bounds.getWidth() / 2 + 20, 
+                            centerY - labelHeight / 2 - spacing / 2, 
+                            bounds.getWidth() - 40, 
+                            labelHeight);
+        
+        // Position the cancel button right below the text
+        cancelButton.setBounds(centerX - buttonWidth / 2, 
+                              centerY + spacing / 2, 
                               buttonWidth, buttonHeight);
     }
 
@@ -180,8 +191,35 @@ public:
     }
 
 private:
+    class CancelButtonLookAndFeel : public juce::LookAndFeel_V4
+    {
+    public:
+        void drawButtonText(juce::Graphics& g, juce::TextButton& button,
+            bool /*isMouseOverButton*/, bool /*isButtonDown*/) override
+        {
+            auto font = juce::Font("Press Start 2P", 12.0f, juce::Font::plain);
+            g.setFont(font);
+            g.setColour(button.findColour(juce::TextButton::textColourOffId));
+            g.drawFittedText(button.getButtonText(), button.getLocalBounds(),
+                juce::Justification::centred, 1);
+        }
+        
+        void drawButtonBackground(juce::Graphics& g, juce::Button& button,
+            const juce::Colour& backgroundColour,
+            bool isMouseOverButton, bool isButtonDown) override
+        {
+            auto bounds = button.getLocalBounds().toFloat();
+            juce::Colour fillColour = isButtonDown ? juce::Colours::grey
+                : isMouseOverButton ? juce::Colours::lightgrey
+                : backgroundColour;
+            g.setColour(fillColour);
+            g.fillRect(bounds);
+        }
+    };
+
     juce::Label loginLabel;
     juce::TextButton cancelButton;
+    CancelButtonLookAndFeel customCancelButtonLookAndFeel;
     juce::URL cognitoUrl;
     std::unique_ptr<juce::StreamingSocket> serverSocket;
     juce::ApplicationProperties appProps;
