@@ -58,12 +58,195 @@ private:
     };
     
     // Chat-specific login overlay
-    class ChatLoginOverlay : public juce::Component
+    class ChatLoginOverlay : public juce::Component, public juce::Timer
     {
     public:
+        ChatLoginOverlay()
+        {
+            floatingBoxes.reserve(35); // Reserve space for up to 35 boxes
+            startTimer(50); // 20 FPS for smooth animation
+        }
+        
         void paint(juce::Graphics& g) override
         {
             g.fillAll(juce::Colours::black);
+            
+            // Draw mystical floating boxes
+            for (const auto& box : floatingBoxes)
+            {
+                if (box.alpha > 0.0f)
+                {
+                    g.setColour(box.color.withAlpha(box.alpha));
+                    g.fillRect(box.x, box.y, box.size, box.size);
+                }
+            }
+        }
+        
+        void timerCallback() override
+        {
+            updateFloatingBoxes();
+            
+            // Randomly create new boxes
+            if (random.nextFloat() < 0.12f && floatingBoxes.size() < 35) // 12% chance per frame, max 35 boxes
+            {
+                createRandomBox();
+            }
+            
+            repaint();
+        }
+        
+    private:
+        // Mystical floating boxes effect
+        struct FloatingBox
+        {
+            float x, y;
+            float size;
+            float alpha;
+            float targetAlpha;
+            float fadeSpeed;
+            juce::Colour color;
+            int lifeTime;
+            int maxLifeTime;
+        };
+        
+        std::vector<FloatingBox> floatingBoxes;
+        std::array<int, 4> quadrantCounts = {0, 0, 0, 0}; // Track boxes per quadrant
+        juce::Random random;
+        
+        void updateFloatingBoxes()
+        {
+            for (auto it = floatingBoxes.begin(); it != floatingBoxes.end();)
+            {
+                auto& box = *it;
+                
+                // Update lifetime
+                box.lifeTime++;
+                
+                // Update alpha towards target
+                float alphaDiff = box.targetAlpha - box.alpha;
+                box.alpha += alphaDiff * box.fadeSpeed;
+                
+                // Change target alpha based on lifecycle
+                if (box.lifeTime < box.maxLifeTime * 0.3f)
+                {
+                    // Fade in phase
+                    box.targetAlpha = 0.6f;
+                }
+                else if (box.lifeTime > box.maxLifeTime * 0.7f)
+                {
+                    // Fade out phase
+                    box.targetAlpha = 0.0f;
+                }
+                else
+                {
+                    // Stable phase with gentle pulsing
+                    box.targetAlpha = 0.4f + 0.2f * std::sin(box.lifeTime * 0.1f);
+                }
+                
+                // Remove boxes that have faded out and exceeded their lifetime
+                if (box.alpha < 0.01f && box.lifeTime > box.maxLifeTime)
+                {
+                    // Update quadrant count before removing
+                    int quadrant = getQuadrant(box.x, box.y);
+                    quadrantCounts[quadrant]--;
+                    it = floatingBoxes.erase(it);
+                }
+                else
+                {
+                    ++it;
+                }
+            }
+        }
+        
+        void createRandomBox()
+        {
+            FloatingBox box;
+            
+            // Find the least populated quadrant for balanced distribution
+            int minQuadrant = 0;
+            int minCount = quadrantCounts[0];
+            for (int i = 1; i < 4; ++i)
+            {
+                if (quadrantCounts[i] < minCount)
+                {
+                    minCount = quadrantCounts[i];
+                    minQuadrant = i;
+                }
+            }
+            
+            // Generate position in the chosen quadrant
+            float halfWidth = getWidth() * 0.5f;
+            float halfHeight = getHeight() * 0.5f;
+            
+            switch (minQuadrant)
+            {
+                case 0: // Top-left
+                    box.x = random.nextFloat() * halfWidth;
+                    box.y = random.nextFloat() * halfHeight;
+                    break;
+                case 1: // Top-right
+                    box.x = halfWidth + random.nextFloat() * halfWidth;
+                    box.y = random.nextFloat() * halfHeight;
+                    break;
+                case 2: // Bottom-left
+                    box.x = random.nextFloat() * halfWidth;
+                    box.y = halfHeight + random.nextFloat() * halfHeight;
+                    break;
+                case 3: // Bottom-right
+                    box.x = halfWidth + random.nextFloat() * halfWidth;
+                    box.y = halfHeight + random.nextFloat() * halfHeight;
+                    break;
+            }
+            
+            // Random size between 3-12 pixels
+            box.size = 3.0f + random.nextFloat() * 9.0f;
+            
+            // Start invisible
+            box.alpha = 0.0f;
+            box.targetAlpha = 0.0f;
+            
+            // Random fade speed
+            box.fadeSpeed = 0.02f + random.nextFloat() * 0.08f;
+            
+            // Random mystical colors (blues, purples, whites)
+            float colorChoice = random.nextFloat();
+            if (colorChoice < 0.4f)
+            {
+                // Blue tones
+                box.color = juce::Colour::fromRGB(100 + random.nextInt(100), 150 + random.nextInt(100), 255);
+            }
+            else if (colorChoice < 0.7f)
+            {
+                // Purple tones
+                box.color = juce::Colour::fromRGB(150 + random.nextInt(100), 100 + random.nextInt(100), 255);
+            }
+            else
+            {
+                // White/silver tones
+                int brightness = 200 + random.nextInt(55);
+                box.color = juce::Colour::fromRGB(brightness, brightness, brightness);
+            }
+            
+            // Random lifetime (2-8 seconds at 20 FPS)
+            box.maxLifeTime = 40 + random.nextInt(120); // 40-160 frames
+            box.lifeTime = 0;
+            
+            // Update quadrant count
+            int quadrant = getQuadrant(box.x, box.y);
+            quadrantCounts[quadrant]++;
+            
+            floatingBoxes.push_back(box);
+        }
+        
+        int getQuadrant(float x, float y)
+        {
+            float halfWidth = getWidth() * 0.5f;
+            float halfHeight = getHeight() * 0.5f;
+            
+            if (x < halfWidth && y < halfHeight) return 0; // Top-left
+            if (x >= halfWidth && y < halfHeight) return 1; // Top-right
+            if (x < halfWidth && y >= halfHeight) return 2; // Bottom-left
+            return 3; // Bottom-right
         }
     };
     
