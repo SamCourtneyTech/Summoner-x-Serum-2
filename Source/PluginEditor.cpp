@@ -154,6 +154,8 @@ SummonerXSerum2AudioProcessorEditor::SummonerXSerum2AudioProcessorEditor(Summone
 SummonerXSerum2AudioProcessorEditor::~SummonerXSerum2AudioProcessorEditor()
 {
     stopTimer();
+    welcomeLoginButton.setLookAndFeel(nullptr);
+    loggedOutLoginButton.setLookAndFeel(nullptr);
 }
 
 void SummonerXSerum2AudioProcessorEditor::paint(juce::Graphics& g)

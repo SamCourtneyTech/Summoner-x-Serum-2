@@ -46,6 +46,7 @@ public:
     ~LoginComponent() override
     {
         stopTimer();
+        cancelButton.setLookAndFeel(nullptr);
         signalThreadShouldExit();
         if (serverSocket != nullptr)
         {
