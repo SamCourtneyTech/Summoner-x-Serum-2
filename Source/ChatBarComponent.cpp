@@ -325,6 +325,11 @@ void ChatBarComponent::sendPromptToGenerateParameters(const juce::String& userPr
                     // Update credits after successful response
                     int credits = fetchUserCredits();
                     setCredits(credits);
+                    
+                    // Notify editor to update other components
+                    if (onCreditsUpdated && credits >= 0) {
+                        onCreditsUpdated(credits);
+                    }
 
                     if (onLoadingStateChanged)
                     {

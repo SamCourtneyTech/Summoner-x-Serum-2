@@ -38,6 +38,11 @@ SummonerXSerum2AudioProcessorEditor::SummonerXSerum2AudioProcessorEditor(Summone
     chatBar.onRefreshTokenRequested = [this]() {
         refreshAccessToken();
     };
+    chatBar.onCreditsUpdated = [this](int newCredits) {
+        settings.setCredits(newCredits);
+        appProps.getUserSettings()->setValue("credits", newCredits);
+        appProps.getUserSettings()->save();
+    };
     
     // Set up tab change callback
     tabs.onTabChanged = [this]() {

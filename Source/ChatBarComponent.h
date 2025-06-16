@@ -25,6 +25,7 @@ public:
     // Callbacks for editor communication
     std::function<void(bool)> onLoadingStateChanged;
     std::function<void()> onRefreshTokenRequested;
+    std::function<void(int)> onCreditsUpdated;
 
 private:
     // Mystical floating boxes effect
