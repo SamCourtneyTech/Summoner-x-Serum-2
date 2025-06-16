@@ -21,6 +21,10 @@ public:
     void mouseEnter(const juce::MouseEvent& event) override;
     void mouseExit(const juce::MouseEvent& event) override;
     void timerCallback() override;
+    
+    // Callbacks for editor communication
+    std::function<void(bool)> onLoadingStateChanged;
+    std::function<void()> onRefreshTokenRequested;
 
 private:
     // Mystical floating boxes effect

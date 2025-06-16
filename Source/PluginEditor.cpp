@@ -31,6 +31,14 @@ SummonerXSerum2AudioProcessorEditor::SummonerXSerum2AudioProcessorEditor(Summone
     addAndMakeVisible(tabs);
     tabs.setVisible(false);
     
+    // Setup ChatBar callbacks
+    chatBar.onLoadingStateChanged = [this](bool show) {
+        showLoadingScreen(show);
+    };
+    chatBar.onRefreshTokenRequested = [this]() {
+        refreshAccessToken();
+    };
+    
     // Set up tab change callback
     tabs.onTabChanged = [this]() {
         updateChatLoginOverlay();
@@ -292,10 +300,17 @@ void SummonerXSerum2AudioProcessorEditor::refreshAccessToken()
     
     DBG("Valid login state detected, starting background credit refresh");
     
+    // Check if credit fetch is already in progress
+    if (creditsFetchInProgress.exchange(true)) {
+        DBG("Credit fetch already in progress, skipping duplicate request");
+        return;
+    }
+    
     // Fetch current credits to verify token is still valid
     std::thread([this, accessToken]() {
         DBG("Background thread started for credit refresh");
         fetchAndUpdateCredits(accessToken);
+        creditsFetchInProgress = false;
         DBG("Background thread completed for credit refresh");
     }).detach();
 }
@@ -354,14 +369,19 @@ void SummonerXSerum2AudioProcessorEditor::fetchAndUpdateCredits(const juce::Stri
                 
                 // Update stored credits and display
                 juce::MessageManager::callAsync([this, newCredits]() {
-                    appProps.getUserSettings()->setValue("credits", newCredits);
-                    appProps.getUserSettings()->save();
+                    // Ensure we're on the message thread for thread safety
+                    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
                     
-                    // Update credits display
-                    chatBar.setCredits(newCredits);
-                    settings.setCredits(newCredits);
-                    
-                    DBG("Credits updated successfully: " + juce::String(newCredits));
+                    if (auto* userSettings = appProps.getUserSettings()) {
+                        userSettings->setValue("credits", newCredits);
+                        userSettings->save();
+                        
+                        // Update credits display
+                        chatBar.setCredits(newCredits);
+                        settings.setCredits(newCredits);
+                        
+                        DBG("Credits updated successfully: " + juce::String(newCredits));
+                    }
                 });
             }
             else

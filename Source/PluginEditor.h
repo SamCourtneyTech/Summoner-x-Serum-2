@@ -1,5 +1,6 @@
 #pragma once
 #include <JuceHeader.h>
+#include <atomic>
 #include "PluginProcessor.h"
 #include "ChatBarComponent.h"
 #include "SerumInterfaceComponent.h"
@@ -282,6 +283,7 @@ private:
     UIState currentUIState = UIState::FirstTime;
     UIState previousUIState = UIState::FirstTime;
     bool loginInitiatedFromSettings = false;
+    std::atomic<bool> creditsFetchInProgress{false};
     
     // Welcome/Login Screen Components
     juce::Label welcomeTitle;

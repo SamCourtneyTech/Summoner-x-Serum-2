@@ -59,6 +59,7 @@ public:
         else if (!show && loadingScreen != nullptr)
         {
             loadingScreen->setVisible(false);
+            parentComponent->removeChildComponent(loadingScreen.get());
             loadingScreen.reset();
         }
     }

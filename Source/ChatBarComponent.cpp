@@ -83,9 +83,9 @@ ChatBarComponent::ChatBarComponent(SummonerXSerum2AudioProcessor& p) : processor
             return;
         }
 
-        if (auto* editor = dynamic_cast<SummonerXSerum2AudioProcessorEditor*>(getParentComponent()->getParentComponent()))
+        if (onLoadingStateChanged)
         {
-            editor->showLoadingScreen(true);
+            onLoadingStateChanged(true);
         }
 
         sendPromptToGenerateParameters(userInput);
@@ -176,9 +176,9 @@ void ChatBarComponent::sendPromptToGenerateParameters(const juce::String& userPr
             DBG("No credits available - showing out of credits modal");
             juce::MessageManager::callAsync([this]() {
                 showOutOfCreditsModal();
-                if (auto* editor = dynamic_cast<SummonerXSerum2AudioProcessorEditor*>(getParentComponent()->getParentComponent()))
+                if (onLoadingStateChanged)
                 {
-                    editor->showLoadingScreen(false);
+                    onLoadingStateChanged(false);
                 }
                 requestInProgress = false;
             });
@@ -190,9 +190,9 @@ void ChatBarComponent::sendPromptToGenerateParameters(const juce::String& userPr
             DBG("Access token is empty - login state: " << (isLoggedIn ? "logged in" : "not logged in"));
             juce::MessageManager::callAsync([this]() {
                 // Try to refresh token first before showing error
-                if (auto* editor = dynamic_cast<SummonerXSerum2AudioProcessorEditor*>(getParentComponent()->getParentComponent()))
+                if (onRefreshTokenRequested)
                 {
-                    editor->refreshAccessToken();
+                    onRefreshTokenRequested();
                     
                     // Give it a moment then check again
                     juce::Timer::callAfterDelay(2000, [this]() {
@@ -203,9 +203,9 @@ void ChatBarComponent::sendPromptToGenerateParameters(const juce::String& userPr
                                 "Authentication Error",
                                 "No access token found. Please log in again.");
                         }
-                        if (auto* editor = dynamic_cast<SummonerXSerum2AudioProcessorEditor*>(getParentComponent()->getParentComponent()))
+                        if (onLoadingStateChanged)
                         {
-                            editor->showLoadingScreen(false);
+                            onLoadingStateChanged(false);
                         }
                         requestInProgress = false;
                     });
@@ -261,10 +261,13 @@ void ChatBarComponent::sendPromptToGenerateParameters(const juce::String& userPr
                             DBG("Invalid token response - attempting to refresh token");
                             
                             // Try to refresh the token
-                            if (auto* editor = dynamic_cast<SummonerXSerum2AudioProcessorEditor*>(getParentComponent()->getParentComponent()))
+                            if (onRefreshTokenRequested)
                             {
-                                editor->refreshAccessToken();
-                                editor->showLoadingScreen(false);
+                                onRefreshTokenRequested();
+                            }
+                            if (onLoadingStateChanged)
+                            {
+                                onLoadingStateChanged(false);
                             }
                             
                             juce::AlertWindow::showMessageBoxAsync(
@@ -323,15 +326,9 @@ void ChatBarComponent::sendPromptToGenerateParameters(const juce::String& userPr
                     int credits = fetchUserCredits();
                     setCredits(credits);
 
-                    if (auto* parent = getParentComponent())
+                    if (onLoadingStateChanged)
                     {
-                        if (auto* grandParent = parent->getParentComponent())
-                        {
-                            if (auto* editor = dynamic_cast<SummonerXSerum2AudioProcessorEditor*>(grandParent))
-                            {
-                                editor->showLoadingScreen(false);
-                            }
-                        }
+                        onLoadingStateChanged(false);
                     }
                     requestInProgress = false;
                     });
@@ -344,15 +341,9 @@ void ChatBarComponent::sendPromptToGenerateParameters(const juce::String& userPr
                         juce::AlertWindow::WarningIcon,
                         "Error",
                         "Failed to generate parameters: " + response);
-                    if (auto* parent = getParentComponent())
+                    if (onLoadingStateChanged)
                     {
-                        if (auto* grandParent = parent->getParentComponent())
-                        {
-                            if (auto* editor = dynamic_cast<SummonerXSerum2AudioProcessorEditor*>(grandParent))
-                            {
-                                editor->showLoadingScreen(false);
-                            }
-                        }
+                        onLoadingStateChanged(false);
                     }
                     requestInProgress = false;
                     });
@@ -366,9 +357,9 @@ void ChatBarComponent::sendPromptToGenerateParameters(const juce::String& userPr
                     juce::AlertWindow::WarningIcon,
                     "Connection Error",
                     "Failed to connect to the server. Please try again.");
-                if (auto* editor = dynamic_cast<SummonerXSerum2AudioProcessorEditor*>(getParentComponent()->getParentComponent()))
+                if (onLoadingStateChanged)
                 {
-                    editor->showLoadingScreen(false);
+                    onLoadingStateChanged(false);
                 }
                 requestInProgress = false;
                 });
