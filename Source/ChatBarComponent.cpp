@@ -280,16 +280,22 @@ void ChatBarComponent::sendPromptToGenerateParameters(const juce::String& userPr
                     {
                         // Handle other error details
                         juce::MessageManager::callAsync([this, detail]() {
+                            if (auto* parent = getParentComponent())
+                            {
+                                if (auto* grandParent = parent->getParentComponent())
+                                {
+                                    if (auto* editor = dynamic_cast<SummonerXSerum2AudioProcessorEditor*>(grandParent))
+                                    {
+                                        editor->showLoadingScreen(false);
+                                    }
+                                }
+                            }
+                            
                             DBG("API error response: " + detail);
                             juce::AlertWindow::showMessageBoxAsync(
                                 juce::AlertWindow::WarningIcon,
                                 "Error",
                                 "Server error: " + detail);
-                            
-                            if (auto* editor = dynamic_cast<SummonerXSerum2AudioProcessorEditor*>(getParentComponent()->getParentComponent()))
-                            {
-                                editor->showLoadingScreen(false);
-                            }
                             requestInProgress = false;
                         });
                         return;
@@ -317,9 +323,15 @@ void ChatBarComponent::sendPromptToGenerateParameters(const juce::String& userPr
                     int credits = fetchUserCredits();
                     setCredits(credits);
 
-                    if (auto* editor = dynamic_cast<SummonerXSerum2AudioProcessorEditor*>(getParentComponent()->getParentComponent()))
+                    if (auto* parent = getParentComponent())
                     {
-                        editor->showLoadingScreen(false);
+                        if (auto* grandParent = parent->getParentComponent())
+                        {
+                            if (auto* editor = dynamic_cast<SummonerXSerum2AudioProcessorEditor*>(grandParent))
+                            {
+                                editor->showLoadingScreen(false);
+                            }
+                        }
                     }
                     requestInProgress = false;
                     });
@@ -332,9 +344,15 @@ void ChatBarComponent::sendPromptToGenerateParameters(const juce::String& userPr
                         juce::AlertWindow::WarningIcon,
                         "Error",
                         "Failed to generate parameters: " + response);
-                    if (auto* editor = dynamic_cast<SummonerXSerum2AudioProcessorEditor*>(getParentComponent()->getParentComponent()))
+                    if (auto* parent = getParentComponent())
                     {
-                        editor->showLoadingScreen(false);
+                        if (auto* grandParent = parent->getParentComponent())
+                        {
+                            if (auto* editor = dynamic_cast<SummonerXSerum2AudioProcessorEditor*>(grandParent))
+                            {
+                                editor->showLoadingScreen(false);
+                            }
+                        }
                     }
                     requestInProgress = false;
                     });
