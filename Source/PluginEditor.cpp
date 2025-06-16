@@ -377,16 +377,17 @@ void SummonerXSerum2AudioProcessorEditor::fetchAndUpdateCredits(const juce::Stri
                     // Ensure we're on the message thread for thread safety
                     jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
                     
+                    // Update credits display first
+                    chatBar.setCredits(newCredits);
+                    settings.setCredits(newCredits);
+                    
+                    // Save to settings safely
                     if (auto* userSettings = appProps.getUserSettings()) {
                         userSettings->setValue("credits", newCredits);
-                        userSettings->save();
-                        
-                        // Update credits display
-                        chatBar.setCredits(newCredits);
-                        settings.setCredits(newCredits);
-                        
-                        DBG("Credits updated successfully: " + juce::String(newCredits));
+                        userSettings->saveIfNeeded();
                     }
+                    
+                    DBG("Credits updated successfully: " + juce::String(newCredits));
                 });
             }
             else
