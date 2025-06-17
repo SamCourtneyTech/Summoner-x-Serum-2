@@ -322,6 +322,9 @@ void SummonerXSerum2AudioProcessorEditor::refreshAccessToken()
 
 void SummonerXSerum2AudioProcessorEditor::fetchAndUpdateCredits(const juce::String& accessToken)
 {
+    // Temporarily disable credits fetching to avoid component lifecycle issues
+    DBG("Credits fetching disabled to prevent component exceptions");
+    return;
     if (accessToken.isEmpty()) {
         DBG("No access token available for credits fetch");
         return;
@@ -373,11 +376,9 @@ void SummonerXSerum2AudioProcessorEditor::fetchAndUpdateCredits(const juce::Stri
                 int newCredits = obj->getProperty("credits").toString().getIntValue();
                 
                 // Update stored credits and display
-                juce::MessageManager::callAsync([this, newCredits]() {
-                    // Ensure we're on the message thread for thread safety
-                    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
-                    
-                    // Update credits display first
+                if (juce::MessageManager::getInstance()->isThisTheMessageThread())
+                {
+                    // We're already on the message thread, update directly
                     chatBar.setCredits(newCredits);
                     settings.setCredits(newCredits);
                     
@@ -388,7 +389,23 @@ void SummonerXSerum2AudioProcessorEditor::fetchAndUpdateCredits(const juce::Stri
                     }
                     
                     DBG("Credits updated successfully: " + juce::String(newCredits));
-                });
+                }
+                else
+                {
+                    // We're on a background thread, defer to message thread
+                    juce::MessageManager::callAsync([this, newCredits]() {
+                        chatBar.setCredits(newCredits);
+                        settings.setCredits(newCredits);
+                        
+                        // Save to settings safely
+                        if (auto* userSettings = appProps.getUserSettings()) {
+                            userSettings->setValue("credits", newCredits);
+                            userSettings->saveIfNeeded();
+                        }
+                        
+                        DBG("Credits updated successfully: " + juce::String(newCredits));
+                    });
+                }
             }
             else
             {

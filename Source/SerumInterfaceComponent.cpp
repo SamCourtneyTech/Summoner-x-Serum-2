@@ -207,22 +207,49 @@ void SerumInterfaceComponent::loadSerum(const juce::File& pluginPath)
         serumInstance.reset();
         DBG("Unloaded previous plugin instance.");
     }
+    
+    juce::File actualPluginPath = pluginPath;
+    
+    // If the specified path doesn't exist, try fallback paths for Serum 2
     if (!pluginPath.exists())
     {
         DBG("Plugin path does not exist: " << pluginPath.getFullPathName());
-        return;
+        
+        // Try common Serum 2 paths
+        juce::Array<juce::File> fallbackPaths = {
+            juce::File("C:/Program Files/Common Files/VST3/Serum2.vst3"),
+            juce::File("C:/Program Files/Common Files/VST3/Serum.vst3")
+        };
+        
+        bool foundValidPath = false;
+        for (const auto& fallbackPath : fallbackPaths)
+        {
+            if (fallbackPath.exists())
+            {
+                DBG("Using fallback path: " << fallbackPath.getFullPathName());
+                actualPluginPath = fallbackPath;
+                foundValidPath = true;
+                break;
+            }
+        }
+        
+        if (!foundValidPath)
+        {
+            DBG("No valid Serum plugin paths found");
+            return;
+        }
     }
-    if (pluginPath.isDirectory())
+    if (actualPluginPath.isDirectory())
     {
-        DBG("Plugin path is a directory: " << pluginPath.getFullPathName());
+        DBG("Plugin path is a directory: " << actualPluginPath.getFullPathName());
     }
-    else if (pluginPath.existsAsFile())
+    else if (actualPluginPath.existsAsFile())
     {
-        DBG("Plugin path is a file: " << pluginPath.getFullPathName());
+        DBG("Plugin path is a file: " << actualPluginPath.getFullPathName());
     }
     else
     {
-        DBG("Plugin path is neither a valid file nor directory: " << pluginPath.getFullPathName());
+        DBG("Plugin path is neither a valid file nor directory: " << actualPluginPath.getFullPathName());
         return;
     }
     juce::AudioProcessor::BusesLayout layout;
@@ -246,12 +273,12 @@ void SerumInterfaceComponent::loadSerum(const juce::File& pluginPath)
     juce::PluginDescription pluginDescription;
     juce::String errorMessage;
     juce::OwnedArray<juce::PluginDescription> descriptions;
-    if (!pluginList.scanAndAddFile(pluginPath.getFullPathName(),
+    if (!pluginList.scanAndAddFile(actualPluginPath.getFullPathName(),
         true,
         descriptions,
         *format))
     {
-        DBG("Failed to scan and add plugin: " << pluginPath.getFullPathName());
+        DBG("Failed to scan and add plugin: " << actualPluginPath.getFullPathName());
         return;
     }
     if (descriptions.isEmpty())
@@ -259,7 +286,43 @@ void SerumInterfaceComponent::loadSerum(const juce::File& pluginPath)
         DBG("No plugin descriptions found!");
         return;
     }
-    pluginDescription = *descriptions.getFirst();
+    
+    // Look for Serum 2 specifically
+    juce::PluginDescription* serum2Description = nullptr;
+    for (auto* desc : descriptions)
+    {
+        if (desc != nullptr)
+        {
+            DBG("Found plugin: " << desc->name << " (version: " << desc->version << ")");
+            if (desc->name.containsIgnoreCase("Serum") && desc->version.startsWith("2."))
+            {
+                serum2Description = desc;
+                DBG("Found Serum 2: " << desc->name << " version " << desc->version);
+                break;
+            }
+        }
+    }
+    
+    if (serum2Description != nullptr)
+    {
+        pluginDescription = *serum2Description;
+        DBG("Using Serum 2 plugin description");
+    }
+    else
+    {
+        // Fallback to first plugin if no Serum 2 found
+        auto* firstDesc = descriptions.getFirst();
+        if (firstDesc != nullptr)
+        {
+            pluginDescription = *firstDesc;
+            DBG("Serum 2 not found, using first available plugin: " << pluginDescription.name);
+        }
+        else
+        {
+            DBG("No valid plugin descriptions found!");
+            return;
+        }
+    }
     if (!pluginDescription.fileOrIdentifier.isEmpty())
     {
         DBG("Plugin Name: " << pluginDescription.name);
@@ -282,21 +345,18 @@ void SerumInterfaceComponent::loadSerum(const juce::File& pluginPath)
         DBG("Error loading plugin: " << errorMessage);
         return;
     }
-    //DBG("Plugin loaded successfully: " << pluginDescriptionantiago::replace("Name: ", instance->getName());
-    DBG("Manufacturer: " << instance->getName());
+    
+    DBG("Plugin loaded successfully: " << instance->getName());
     DBG("Plugin loaded successfully!");
-    serumInstance = std::move(instance);
-    DBG("Serum instance initialized!");
-    serumEditor.reset(serumInstance->createEditorIfNeeded());
-    if (serumEditor != nullptr)
+    
+    // Use the critical section for thread safety
     {
-        DBG("Editor created successfully!");
-        addAndMakeVisible(serumEditor.get());
-        resized();
-    }
-    else
-    {
-        DBG("Failed to create plugin editor.");
+        const juce::ScopedLock lock(criticalSection);
+        serumInstance = std::move(instance);
+        DBG("Serum instance initialized!");
+        
+        // Don't create editor here - let it be created when needed in resized() or paint()
+        DBG("Plugin loaded successfully, editor will be created when component is displayed");
     }
 }
 
@@ -304,10 +364,35 @@ void SerumInterfaceComponent::resized()
 {
     const juce::ScopedLock lock(criticalSection);
     auto bounds = getLocalBounds();
+    
+    // Create editor if we have a serum instance but no editor yet
+    if (serumInstance != nullptr && serumEditor == nullptr && juce::MessageManager::getInstance()->isThisTheMessageThread())
+    {
+        try
+        {
+            serumEditor.reset(serumInstance->createEditorIfNeeded());
+            if (serumEditor != nullptr)
+            {
+                DBG("Editor created successfully in resized()!");
+                addAndMakeVisible(serumEditor.get());
+            }
+            else
+            {
+                DBG("Failed to create plugin editor in resized().");
+            }
+        }
+        catch (const std::exception& e)
+        {
+            DBG("Exception creating editor: " << e.what());
+            serumEditor.reset();
+        }
+    }
+    
     if (serumEditor != nullptr)
     {
         serumEditor->setBounds(getLocalBounds());
     }
+    
     const int buttonWidth = 100;
     const int buttonHeight = 30;
     const int counterWidth = 100;

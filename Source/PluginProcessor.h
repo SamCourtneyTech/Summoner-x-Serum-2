@@ -60,7 +60,7 @@ private:
 
     SerumInterfaceComponent serumInterface;
     SettingsComponent settingsComponent;
-    juce::String serumPluginPath = "C:/Program Files/Common Files/VST3/Serum.vst3";
+    juce::String serumPluginPath = "C:/Program Files/Common Files/VST3/Serum2.vst3";
     std::vector<std::map<std::string, std::string>> responses;
     int currentResponseIndex = 0;
     mutable juce::CriticalSection responseLock;
